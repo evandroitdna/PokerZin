@@ -3,213 +3,398 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Planning Poker</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+<title>PokerZin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='10' y='14' width='52' height='72' rx='10' fill='%233b82f6' transform='rotate(-12 36 50)'/><rect x='38' y='14' width='52' height='72' rx='10' fill='%2306b6d4'/><text x='64' y='62' font-size='34' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>3</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f6fb; --surface: #ffffff; --surface-2: #eef1f8; --border: #dde2ee;
-    --text: #1d2433; --muted: #6b7590; --primary: #3b5bdb; --primary-ink: #fff;
-    --primary-soft: #e5ebff; --table: #cfe0ff; --ok: #2b9348; --warn: #e8590c;
-    --card-back: linear-gradient(135deg, #3b5bdb, #6a83f0);
-    --shadow: 0 1px 2px rgba(20,30,60,.06), 0 6px 20px rgba(20,30,60,.06);
+    --bg: linear-gradient(180deg, #d8e9fa 0%, #e9f2fb 38%, #f6f9fd 75%, #fbfcfe 100%);
+    --surface: #ffffff;
+    --surface-2: #f1f5fa;
+    --border: #e2e9f2;
+    --text: #1d2939;
+    --muted: #7b8aa0;
+    --accent: #06b6d4;
+    --accent-ink: #0891b2;
+    --accent-2: #3b82f6;
+    --grad: linear-gradient(135deg, #22c3e6, #3b82f6);
+    --ok: #10b981; --warn: #f59e0b; --danger: #ef4444;
+    --shadow: 0 2px 6px rgba(30,60,110,.06), 0 12px 32px -12px rgba(30,60,110,.18);
+    --shadow-lg: 0 20px 60px -20px rgba(30,60,110,.35);
+    --dashed: #cfdbe8;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #12151d; --surface: #1b1f2a; --surface-2: #232838; --border: #2e3446;
-      --text: #e6e9f2; --muted: #9099b2; --primary: #7b93ff; --primary-ink: #0d1020;
-      --primary-soft: #262f52; --table: #26304d; --ok: #51cf66; --warn: #ff922b;
-      --card-back: linear-gradient(135deg, #4c63d2, #7b93ff);
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+      --bg: linear-gradient(180deg, #0d1a2b 0%, #101c2e 50%, #0e1726 100%);
+      --surface: #16233a;
+      --surface-2: #1c2b45;
+      --border: #24344f;
+      --text: #e6edf7;
+      --muted: #8798b3;
+      --accent: #22d3ee;
+      --accent-ink: #22d3ee;
+      --shadow: 0 2px 6px rgba(0,0,0,.2), 0 12px 32px -12px rgba(0,0,0,.5);
+      --shadow-lg: 0 20px 60px -20px rgba(0,0,0,.7);
+      --dashed: #2c3e5c;
+      color-scheme: dark;
     }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  html { background: #eef4fb; }
+  @media (prefers-color-scheme: dark) { html { background: #0e1726; } }
+  body { margin: 0; min-height: 100vh; font: 600 15px/1.5 Nunito, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); background-attachment: fixed; -webkit-font-smoothing: antialiased; }
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
   .hidden { display: none !important; }
 
-  .btn { border: 1px solid var(--border); background: var(--surface); padding: 8px 14px; border-radius: 10px; font-weight: 600; }
-  .btn:hover { background: var(--surface-2); }
-  .btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
-  .btn.primary:hover { filter: brightness(1.08); }
-  .btn.big { padding: 12px 26px; font-size: 16px; border-radius: 12px; }
-  .btn.ghost { background: transparent; border-color: transparent; }
-  .btn.ghost:hover { background: var(--surface-2); }
-  .btn:disabled { opacity: .5; cursor: default; }
-  input[type=text], input[type=number], textarea, select {
-    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
-  }
-  input:focus, textarea:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
-  label.field { display: block; margin-bottom: 14px; }
-  label.field > span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-  .check { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  /* ---------- Botões & campos ---------- */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border); background: var(--surface); padding: 9px 16px; border-radius: 999px; font-weight: 700; font-size: 14px; transition: transform .15s, box-shadow .15s, background .15s; box-shadow: var(--shadow); }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 8px 20px -8px rgba(14,165,233,.7); }
+  .btn.accent { color: var(--accent-ink); }
+  .btn.big { padding: 13px 28px; font-size: 16px; }
+  .btn.icon { width: 40px; height: 40px; padding: 0; }
+  .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+  .btn.chip { padding: 5px 12px; font-size: 13px; box-shadow: none; background: var(--surface-2); border-color: transparent; }
+  .btn.chip:hover { background: var(--border); }
+  .input { width: 100%; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); transition: border-color .15s, box-shadow .15s; font-weight: 700; }
+  .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(6,182,212,.15); }
+  .label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .field { display: block; margin-bottom: 18px; }
+  .switch { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; cursor: pointer; font-size: 14px; user-select: none; }
+  .switch input { appearance: none; width: 42px; height: 24px; border-radius: 999px; background: var(--border); position: relative; flex: 0 0 auto; cursor: pointer; transition: background .2s; margin: 0; }
+  .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+  .switch input:checked { background: var(--accent); }
+  .switch input:checked::after { transform: translateX(18px); }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+
+  /* ---------- Logo ---------- */
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 24px; letter-spacing: -.02em; text-decoration: none; color: var(--text); }
+  .logo .mk { position: relative; width: 30px; height: 32px; }
+  .logo .mk i { position: absolute; width: 20px; height: 28px; border-radius: 5px; top: 2px; }
+  .logo .mk i:first-child { left: 0; background: #3b82f6; transform: rotate(-14deg); }
+  .logo .mk i:last-child { left: 9px; background: #06b6d4; transform: rotate(6deg); box-shadow: -2px 2px 6px rgba(0,0,0,.15); }
+  .logo b { color: var(--ok); font-weight: 900; }
 
   /* ---------- Home ---------- */
-  .center-page { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 28px; width: 100%; max-width: 480px; }
-  .panel h1 { margin: 0 0 4px; font-size: 24px; }
-  .panel p.sub { margin: 0 0 22px; color: var(--muted); }
-  .decks { display: grid; gap: 8px; margin-bottom: 14px; }
-  .deck-opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
-  .deck-opt:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
-  .deck-opt b { display: block; }
-  .deck-opt small { color: var(--muted); }
+  .home { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; max-width: 1140px; margin: 0 auto; padding: 40px 24px; }
+  .hero h1 { font-size: clamp(40px, 6vw, 62px); line-height: 1.04; margin: 28px 0 16px; letter-spacing: -.03em; font-weight: 900; }
+  .hero h1 em { font-style: normal; background: linear-gradient(90deg, #3b82f6, #06b6d4, #22c55e, #eab308, #f97316); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--muted); font-size: 18px; max-width: 470px; margin: 0 0 26px; }
+  .feats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .feat { padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+  .fan { position: relative; height: 170px; margin-top: 44px; }
+  .fan .c { position: absolute; bottom: 0; width: 86px; height: 124px; border-radius: 14px; padding: 8px 11px; font-size: 28px; font-weight: 900; color: #fff; box-shadow: var(--shadow); transform-origin: 50% 160%; }
+  .create { padding: 32px; border-radius: 28px; box-shadow: var(--shadow-lg); }
+  .create h2 { margin: 0 0 4px; font-size: 24px; font-weight: 900; }
+  .create .sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+  .decks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .deck-opt { position: relative; padding: 12px; border: 2px solid var(--border); border-radius: 16px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .deck-opt input { position: absolute; opacity: 0; }
+  .deck-opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(6,182,212,.12); }
+  .deck-opt b { display: block; font-size: 14px; margin-bottom: 7px; font-weight: 800; }
+  .deck-opt .minis { display: flex; gap: 3px; flex-wrap: wrap; }
+  .deck-opt .minis span { font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 5px; color: #fff; }
 
-  /* ---------- Room ---------- */
-  header.top { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-  header.top h2 { margin: 0; font-size: 18px; flex: 1; min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .layout { display: grid; grid-template-columns: 1fr 320px; min-height: calc(100vh - 61px); }
+  /* ---------- Sala: header ---------- */
+  header.top { display: flex; align-items: center; gap: 12px; padding: 16px 28px; }
+  header.top .titles { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; }
+  header.top h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header.top .actions { display: flex; gap: 10px; align-items: center; }
+  .me-btn { border: 3px solid var(--surface); border-radius: 50%; padding: 0; background: none; box-shadow: var(--shadow); transition: transform .15s; }
+  .me-btn:hover { transform: scale(1.06); }
+  .me-btn .avatar { width: 46px; height: 46px; font-size: 24px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 330px; gap: 0 24px; padding: 0 24px; }
   .layout.no-side { grid-template-columns: 1fr; }
-  main.game { display: flex; flex-direction: column; align-items: center; padding: 20px 16px 200px; gap: 18px; }
-  aside.side { border-left: 1px solid var(--border); background: var(--surface); padding: 16px; overflow-y: auto; max-height: calc(100vh - 61px); position: sticky; top: 0; }
-  aside.side h3 { margin: 0 0 4px; font-size: 16px; }
+  main.game { display: flex; flex-direction: column; align-items: center; padding: 8px 0 250px; gap: 22px; min-width: 0; }
+  aside.side { padding: 18px; align-self: start; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; margin-bottom: 220px; }
 
-  .story { width: 100%; max-width: 720px; display: flex; gap: 8px; }
-  .story input { font-size: 16px; font-weight: 600; }
+  .story { width: 100%; max-width: 640px; display: flex; align-items: stretch; }
+  .story .num-tag { display: grid; place-items: center; min-width: 64px; padding: 0 12px; border-radius: 18px 0 0 18px; background: var(--surface); border: 1px solid var(--border); border-right: 0; font-weight: 900; font-size: 18px; color: var(--accent-ink); box-shadow: var(--shadow); }
+  .story .input { border-radius: 0 18px 18px 0; padding: 18px 20px; font-size: 18px; font-weight: 800; box-shadow: var(--shadow); }
 
-  .table-wrap { display: grid; grid-template-rows: auto auto auto; gap: 14px; justify-items: center; width: 100%; max-width: 900px; }
-  .seats { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; min-height: 110px; align-items: flex-end; }
-  .seats.bottom { align-items: flex-start; }
-  .seat { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; position: relative; }
-  .seats.bottom .seat { flex-direction: column-reverse; }
-  .seat .name { font-size: 13px; font-weight: 600; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
-  .seat.offline { opacity: .45; }
-  .seat .tag { font-size: 10px; color: var(--muted); font-weight: 500; }
-  .seat-menu { position: absolute; top: -6px; right: 2px; font-size: 14px; border: 0; background: transparent; color: var(--muted); padding: 0 4px; display: none; }
-  .seat:hover .seat-menu { display: block; }
-  .mini-card { width: 46px; height: 68px; border-radius: 8px; border: 2px dashed var(--border); display: grid; place-items: center; font-weight: 800; font-size: 18px; background: var(--surface-2); transition: transform .4s; }
-  .mini-card.voted { border: 0; background: var(--card-back); }
-  .mini-card.shown { border: 2px solid var(--primary); background: var(--surface); color: var(--primary); animation: flip .45s ease; }
-  .mini-card.spect { border-style: solid; font-size: 20px; }
-  @keyframes flip { from { transform: rotateY(90deg); } to { transform: rotateY(0); } }
+  /* ---------- Assentos ---------- */
+  .arena { display: grid; gap: 22px; justify-items: center; width: 100%; max-width: 980px; }
+  .seats { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; min-height: 10px; }
+  .seat { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 92px; position: relative; }
+  .seat .name { font-size: 13px; font-weight: 800; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .seat.me .name { color: var(--accent-ink); }
+  .seat.offline { opacity: .45; filter: grayscale(1); }
+  .seat-menu { position: absolute; top: -8px; right: -4px; z-index: 3; border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 999px; width: 26px; height: 26px; padding: 0; font-weight: 900; opacity: 0; transition: opacity .15s; box-shadow: var(--shadow); }
+  .seat:hover .seat-menu { opacity: 1; }
 
-  .table { width: min(100%, 520px); min-height: 150px; border-radius: 26px; background: var(--table); display: grid; place-items: center; padding: 20px; text-align: center; }
-  .table .hint { color: var(--muted); font-weight: 600; }
+  .tile { width: 84px; height: 116px; perspective: 800px; position: relative; }
+  .tile .in { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.3,1.35,.5,1); }
+  .tile .f { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; display: grid; place-items: center; }
+  .tile .back { border: 2px dashed var(--dashed); background: color-mix(in srgb, var(--surface) 55%, transparent); transition: background .25s, border-color .25s, transform .25s; }
+  .tile .back .avatar { opacity: .55; transition: opacity .2s; }
+  .tile.voted .back { border: 0; background: var(--grad); box-shadow: 0 10px 24px -10px rgba(14,165,233,.8); transform: translateY(-4px); }
+  .tile.voted .back .avatar { opacity: 1; box-shadow: 0 0 0 3px rgba(255,255,255,.7); }
+  .tile .check { position: absolute; right: -6px; top: -6px; width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 900; border: 3px solid var(--surface); z-index: 2; animation: popIn .3s cubic-bezier(.3,1.6,.5,1) both; }
+  .tile .crown { position: absolute; left: -6px; top: -8px; font-size: 16px; z-index: 2; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); }
+  .tile .front { transform: rotateY(180deg); color: #fff; font-size: 34px; font-weight: 900; box-shadow: var(--shadow); align-content: center; }
+  .tile .front .avatar { position: absolute; bottom: 6px; right: 6px; width: 24px; height: 24px; font-size: 12px; box-shadow: 0 0 0 2px rgba(255,255,255,.8); }
+  .tile.shown .in { transform: rotateY(180deg); }
+  .tile.shown.anim .in { animation: flipIn .75s cubic-bezier(.3,1.35,.5,1) both; }
+  .tile.spect .back { border-style: solid; }
+  @keyframes flipIn { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+  @keyframes popIn { from { transform: scale(0); } }
 
-  .results { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
-  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  .stat { flex: 1; min-width: 100px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
-  .stat small { display: block; color: var(--muted); font-size: 12px; font-weight: 600; }
-  .stat b { font-size: 22px; }
-  .bars { display: grid; gap: 6px; margin-bottom: 14px; }
-  .bar { display: grid; grid-template-columns: 56px 1fr 70px; gap: 10px; align-items: center; font-size: 14px; }
-  .bar .v { font-weight: 800; text-align: right; }
-  .bar .track { height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
-  .bar .fill { height: 100%; background: var(--primary); border-radius: 6px; }
-  .bar .c { color: var(--muted); }
-  .save-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 14px; }
-  .save-row input { width: 110px; }
+  .avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 26px; color: #fff; overflow: hidden; flex: 0 0 auto; user-select: none; line-height: 1; }
+  .avatar.ini { font-size: 17px; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-  /* Mão de cartas (rodapé) */
-  .hand { position: fixed; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--border); padding: 12px 12px 14px; z-index: 5; }
-  .layout:not(.no-side) ~ .hand { right: 320px; }
-  .hand .label { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
-  .cards { display: flex; gap: 8px; overflow-x: auto; padding: 12px 4px 4px; }
-  .cards > :first-child { margin-left: auto; } .cards > :last-child { margin-right: auto; }
-  .card { flex: 0 0 auto; width: 54px; height: 82px; border-radius: 10px; border: 2px solid var(--primary); background: var(--surface); color: var(--primary); font-weight: 800; font-size: 19px; transition: transform .12s, background .12s; display: grid; place-items: center; }
-  .card:hover:not(:disabled) { transform: translateY(-6px); }
-  .card.sel { background: var(--primary); color: var(--primary-ink); transform: translateY(-10px); }
-  .card.custom { border-style: dashed; font-size: 13px; line-height: 1.1; padding: 4px; }
-  .card:disabled { opacity: .45; cursor: default; }
-  .custom-box { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 8px; }
-  .custom-box input { width: 120px; }
+  /* ---------- Centro (mesa) ---------- */
+  .table { width: min(100%, 600px); min-height: 150px; border-radius: 28px; display: grid; place-items: center; padding: 22px 28px; text-align: center; }
+  .center { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .center-main { display: flex; align-items: center; gap: 20px; }
+  .hint { font-weight: 800; font-size: 17px; }
+  .small { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .progress { width: 170px; height: 7px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 10px auto 4px; }
+  .progress span { display: block; height: 100%; background: var(--grad); border-radius: 99px; transition: width .4s; }
+  .expired { color: var(--warn); font-weight: 900; font-size: 15px; animation: pulse 1.2s ease-in-out infinite; }
+  .timer { position: relative; width: 80px; height: 80px; flex: 0 0 auto; }
+  .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer circle { fill: none; stroke-width: 7; }
+  .timer .trk { stroke: var(--surface-2); }
+  .timer .prog { stroke: url(#tg); stroke-linecap: round; transition: stroke-dashoffset .25s linear; }
+  .timer.warn .prog { stroke: var(--warn); }
+  .timer.danger .prog { stroke: var(--danger); }
+  .timer.danger { animation: pulse .8s ease-in-out infinite; }
+  .timer .t { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 900; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .timer-bar { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .timer-bar .lbl { font-size: 12px; color: var(--muted); font-weight: 800; margin-right: 2px; }
+  @keyframes pulse { 50% { transform: scale(1.05); opacity: .85; } }
 
-  .hist-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; }
-  .hist-item .t { flex: 1; min-width: 0; word-break: break-word; font-size: 14px; }
-  .hist-item .t small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .hist-item .val { font-weight: 800; color: var(--primary); white-space: nowrap; }
-  .hist-item .x { border: 0; background: transparent; color: var(--muted); padding: 0 2px; }
-  .total { display: flex; justify-content: space-between; padding: 10px 12px; background: var(--primary-soft); border-radius: 10px; margin: 10px 0 14px; font-weight: 700; }
-  .empty { color: var(--muted); font-size: 14px; }
+  /* ---------- Resultados ---------- */
+  .results { width: 100%; max-width: 680px; border-radius: 24px; padding: 24px; animation: rise .45s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  .res-top { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; margin-bottom: 22px; }
+  .avg small, .chip-s small { display: block; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .avg .big { font-size: 56px; line-height: 1; font-weight: 900; letter-spacing: -.03em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .avg .big span { font-size: 24px; }
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .chip-s { background: var(--surface-2); border-radius: 16px; padding: 10px 12px; }
+  .chip-s b { font-size: 21px; font-weight: 900; }
+  .consensus { display: inline-flex; gap: 6px; align-items: center; margin-top: 8px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 900; background: rgba(16,185,129,.14); color: var(--ok); }
+  .dist { display: grid; gap: 10px; margin-bottom: 20px; }
+  .drow { display: grid; grid-template-columns: 50px 1fr auto; gap: 12px; align-items: center; }
+  .drow .v { font-size: 17px; font-weight: 900; text-align: center; padding: 8px 0; border-radius: 10px; color: #fff; }
+  .drow .track { height: 14px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+  .drow .fill { display: block; height: 100%; border-radius: 99px; animation: grow .7s cubic-bezier(.2,.8,.2,1) both; transform-origin: left; }
+  @keyframes grow { from { transform: scaleX(0); } }
+  .drow .who { display: flex; align-items: center; gap: 8px; min-width: 60px; }
+  .stack { display: flex; }
+  .stack .avatar { width: 26px; height: 26px; font-size: 13px; border: 2px solid var(--surface); margin-left: -8px; }
+  .stack .avatar.ini { font-size: 10px; }
+  .stack .avatar:first-child { margin-left: 0; }
+  .save-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 18px; }
+  .save-row .input { width: 100px; text-align: center; font-size: 20px; font-weight: 900; padding: 8px; }
 
-  dialog { border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); padding: 24px; width: min(440px, calc(100vw - 32px)); box-shadow: var(--shadow); }
-  dialog::backdrop { background: rgba(10,15,30,.45); }
-  dialog h3 { margin: 0 0 16px; }
+  /* ---------- Mão de cartas (saindo da borda) ---------- */
+  .hand { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; pointer-events: none; animation: rise .4s ease both; }
+  body.side-open { --side: 354px; }
+  body.side-open .hand { right: 354px; }
+  .hand-top { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 14px; font-weight: 800; margin-bottom: 6px; pointer-events: auto; width: max-content; margin-inline: auto; padding: 5px 14px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 80%, transparent); backdrop-filter: blur(8px); }
+  .hand-top .muted { color: var(--muted); }
+  .pill-timer { padding: 1px 9px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .pill-timer.warn { background: rgba(245,158,11,.18); color: var(--warn); }
+  .pill-timer.danger { background: rgba(239,68,68,.18); color: var(--danger); }
+  .cards { display: flex; justify-content: safe center; padding: 0 12px; overflow-x: auto; overflow-y: hidden; pointer-events: auto; height: 128px; align-items: flex-start; scrollbar-width: none; }
+  .cards::-webkit-scrollbar { display: none; }
+  .card { flex: 0 0 auto; width: min(98px, calc((100vw - var(--side, 0px) - 40px) / var(--n, 12) + 14px)); height: 150px; margin-left: -14px; border: 0; border-radius: 12px 12px 0 0; padding: 10px 12px; text-align: left; font-size: 30px; font-weight: 900; line-height: 1; display: block; position: relative; transform: translateY(26px) rotate(var(--r, 0deg)); transition: transform .2s cubic-bezier(.3,1.5,.5,1), box-shadow .2s, filter .2s; box-shadow: -6px 0 16px -6px rgba(0,0,0,.25); }
+  .card:first-child { margin-left: 0; }
+  .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 40%); pointer-events: none; }
+  .card:hover { transform: translateY(6px) rotate(0); z-index: 2; }
+  .card.sel { transform: translateY(-2px) rotate(0); z-index: 3; box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px var(--accent), 0 -10px 30px -8px rgba(0,0,0,.35); }
+  .card.custom { background: var(--surface); color: var(--accent-ink); border: 2px dashed var(--accent); border-bottom: 0; font-size: 15px; }
+  .card.custom .plus { display: block; font-size: 30px; margin-bottom: 4px; }
+  .card.custom.sel { border-style: solid; }
+  .card.custom.sel .val { font-size: 30px; }
+  .custom-pop { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); border-radius: 18px; padding: 14px; display: flex; gap: 8px; align-items: center; pointer-events: auto; animation: rise .25s ease both; box-shadow: var(--shadow-lg); }
+  .custom-pop .input { width: 120px; text-align: center; font-size: 20px; padding: 8px; }
+
+  /* ---------- Histórico ---------- */
+  .side-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .side-head h3 { margin: 0; font-size: 18px; font-weight: 900; }
+  .total { border-radius: 18px; padding: 16px 18px; margin-bottom: 16px; background: var(--grad); color: #fff; box-shadow: 0 12px 26px -12px rgba(14,165,233,.8); }
+  .total small { display: block; opacity: .9; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+  .total b { font-size: 34px; line-height: 1.1; font-weight: 900; }
+  .total span { opacity: .9; font-size: 13px; }
+  .hist-item { border-radius: 14px; padding: 12px 12px 12px 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; background: var(--surface-2); }
+  .hist-item .t { flex: 1; min-width: 0; word-break: break-word; font-size: 14px; font-weight: 800; }
+  .hist-item .t small { display: block; color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 3px; }
+  .hist-item .val { font-size: 16px; font-weight: 900; padding: 4px 10px; border-radius: 10px; color: #fff; white-space: nowrap; }
+  .hist-item .x { border: 0; background: transparent; color: var(--muted); padding: 2px 4px; opacity: .5; }
+  .hist-item .x:hover { opacity: 1; color: var(--danger); }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 26px 10px; border: 2px dashed var(--border); border-radius: 16px; margin-bottom: 12px; }
+
+  /* ---------- Diálogos ---------- */
+  dialog { border: 0; border-radius: 28px; background: var(--surface); color: var(--text); padding: 28px; width: min(460px, calc(100vw - 32px)); box-shadow: var(--shadow-lg); overflow: visible; }
+  dialog[open] { animation: pop .28s cubic-bezier(.3,1.4,.5,1) both; }
+  @keyframes pop { from { opacity: 0; transform: scale(.93); } }
+  dialog::backdrop { background: rgba(120,150,190,.35); backdrop-filter: blur(8px); }
+  @media (prefers-color-scheme: dark) { dialog::backdrop { background: rgba(5,10,20,.6); } }
+  dialog h3 { margin: 0 0 20px; font-size: 21px; font-weight: 900; }
   .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
-  .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 10px; font-weight: 600; z-index: 50; }
 
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    aside.side { border-left: 0; border-top: 1px solid var(--border); max-height: none; position: static; padding-bottom: 200px; }
-    .layout:not(.no-side) ~ .hand { right: 0; }
+  #joinDialog { width: min(620px, calc(100vw - 24px)); padding: 30px 30px 44px; text-align: center; }
+  .pv { display: inline-block; position: relative; margin-bottom: 16px; }
+  .pv .avatar { width: 108px; height: 108px; font-size: 58px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.35); }
+  .pv .avatar.ini { font-size: 38px; }
+  .name-input { text-align: center; font-size: 26px; font-weight: 900; padding: 14px; border-radius: 18px; background: #fffdf0; }
+  @media (prefers-color-scheme: dark) { .name-input { background: var(--surface-2); } }
+  .swatches { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin: 18px 0 14px; }
+  .sw { width: 24px; height: 24px; border-radius: 8px; border: 0; padding: 0; transition: transform .15s; }
+  .sw:hover { transform: scale(1.12); }
+  .sw.sel { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); transform: scale(1.12); }
+  .emojis { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; max-height: 210px; overflow-y: auto; padding: 4px; }
+  .emo { aspect-ratio: 1; border: 0; border-radius: 50%; background: transparent; font-size: 28px; line-height: 1; padding: 0; transition: transform .15s, background .15s; display: grid; place-items: center; }
+  .emo:hover { transform: scale(1.15); background: var(--surface-2); }
+  .emo.sel { box-shadow: 0 0 0 3px var(--accent); background: var(--surface-2); }
+  .join-extra { display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0 6px; }
+  .join-extra .switch { margin: 0; }
+  .err { color: var(--danger); font-size: 14px; margin: 8px 0 0; }
+  .ok-fab { position: absolute; left: 50%; bottom: -30px; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; border: 4px solid var(--surface); background: var(--grad); color: #fff; font-size: 28px; font-weight: 900; box-shadow: 0 10px 24px -8px rgba(14,165,233,.8); transition: transform .15s; }
+  .ok-fab:hover { transform: translateX(-50%) scale(1.08); }
+  .menu-list { display: grid; gap: 8px; }
+
+  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 999px; font-weight: 800; z-index: 60; background: var(--text); color: var(--surface); box-shadow: var(--shadow-lg); animation: rise .25s ease both; }
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 70; }
+
+  @media (max-width: 1000px) {
+    .home { grid-template-columns: 1fr; gap: 28px; }
+    .fan { display: none; }
+    .layout, .layout.no-side { grid-template-columns: 1fr; padding: 0 16px; }
+    aside.side { position: static; max-height: none; margin-bottom: 200px; }
+    body.side-open { --side: 0px; }
+    body.side-open .hand { right: 0; }
     main.game { padding-bottom: 30px; }
+    .chips { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    header.top { padding: 12px 16px; }
+    header.top h2, .hide-sm, header.top .logo > span:last-child { display: none; }
+    .res-top { grid-template-columns: 1fr; }
+    .seats { gap: 10px; }
+    .seat { width: 72px; }
+    .tile { width: 66px; height: 92px; }
+    .tile .front { font-size: 26px; }
+    .tile .back .avatar { width: 38px; height: 38px; font-size: 20px; }
+    .decks { grid-template-columns: 1fr; }
+    .card { width: 68px; height: 110px; font-size: 22px; }
+    .cards { height: 100px; justify-content: flex-start; }
+    .custom-pop { bottom: 120px; }
+    .emojis { grid-template-columns: repeat(7, 1fr); }
+    .story .num-tag { display: none; }
+    .story .input { border-radius: 18px; }
   }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22c3e6"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs></svg>
 
 <!-- ================= HOME ================= -->
-<section id="home" class="center-page hidden">
-  <form class="panel" id="createForm">
-    <h1>🃏 Planning Poker</h1>
-    <p class="sub">Crie uma sala e compartilhe o link com o time.</p>
-    <label class="field"><span>Nome da sala</span><input type="text" id="roomName" placeholder="Ex.: Sprint 42" maxlength="60"></label>
-    <span style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px">Baralho</span>
-    <div class="decks" id="deckOptions"></div>
-    <label class="field hidden" id="customDeckField"><span>Cartas (separadas por vírgula)</span>
-      <input type="text" id="customDeck" value="1, 2, 3, 4, 6, 8, 12, 16, ?, ☕"></label>
-    <label class="check"><input type="checkbox" id="allowCustom" checked> Permitir “outro valor” (ex.: 3h quando só existem 2h e 4h)</label>
-    <button class="btn primary big" style="width:100%">Criar sala</button>
-  </form>
-</section>
-
-<!-- ================= ROOM ================= -->
-<section id="room" class="hidden">
-  <header class="top">
-    <h2 id="roomTitle">Sala</h2>
-    <button class="btn" id="inviteBtn">🔗 Copiar convite</button>
-    <button class="btn ghost" id="historyBtn">📋 Histórico</button>
-    <button class="btn ghost" id="settingsBtn" title="Configurações da sala (somente o facilitador)">⚙️</button>
-    <button class="btn ghost" id="meBtn" title="Meu nome / modo espectador">👤 <span id="meName"></span></button>
-  </header>
-  <div class="layout" id="layout">
-    <main class="game">
-      <div class="story">
-        <input type="text" id="storyInput" placeholder="Qual tarefa estamos estimando? (ex.: JIRA-123 Tela de login)" maxlength="200">
+<section id="home" class="hidden">
+  <div class="home">
+    <div class="hero">
+      <span class="logo"><span class="mk"><i></i><i></i></span><span>Poker<b>Zin</b></span></span>
+      <h1>Estimativas do time,<br><em>sem enrolação.</em></h1>
+      <p>Votos ocultos, timer, avatar e aquele valor “quebrado” quando 2h é pouco e 4h é demais.</p>
+      <div class="feats">
+        <span class="feat">⚡ Tempo real</span><span class="feat">✏️ Valor customizado</span>
+        <span class="feat">⏱ Timer</span><span class="feat">📋 Histórico + CSV</span>
       </div>
-      <div class="table-wrap">
-        <div class="seats" id="seatsTop"></div>
-        <div class="table" id="tableCenter"></div>
-        <div class="seats bottom" id="seatsBottom"></div>
-      </div>
-      <div class="results hidden" id="results"></div>
-    </main>
-    <aside class="side" id="side">
-      <h3>Histórico</h3>
-      <div class="total" id="total"></div>
-      <div id="historyList"></div>
-      <button class="btn" id="exportBtn" style="width:100%">⬇️ Exportar CSV</button>
-    </aside>
-  </div>
-  <div class="hand" id="hand">
-    <div class="label" id="handLabel">Escolha sua carta 👇</div>
-    <div class="cards" id="cards"></div>
-    <form class="custom-box hidden" id="customBox">
-      <input type="text" inputmode="decimal" id="customInput" placeholder="Ex.: 3 ou 2,5" maxlength="7">
-      <button class="btn primary">Votar</button>
-      <button class="btn ghost" type="button" id="customCancel">Cancelar</button>
+      <div class="fan" id="fan" aria-hidden="true"></div>
+    </div>
+    <form class="create panel" id="createForm">
+      <h2>Criar uma sala</h2>
+      <p class="sub">Depois é só mandar o link para o time.</p>
+      <label class="field"><span class="label">Nome da sala</span><input class="input" type="text" id="roomName" placeholder="Ex.: Sprint 42" maxlength="60"></label>
+      <span class="label">Baralho</span>
+      <div class="decks" id="deckOptions"></div>
+      <label class="field hidden" id="customDeckField"><span class="label">Suas cartas (separadas por vírgula)</span>
+        <input class="input" type="text" id="customDeck" value="1, 2, 3, 4, 6, 8, 12, 16, ?, ☕"></label>
+      <label class="switch"><input type="checkbox" id="allowCustom" checked> Permitir “outro valor” (ex.: 3h entre 2h e 4h)</label>
+      <button class="btn primary big" style="width:100%">Criar sala →</button>
     </form>
   </div>
 </section>
 
-<!-- ================= DIALOGS ================= -->
+<!-- ================= SALA ================= -->
+<section id="room" class="hidden">
+  <header class="top">
+    <div class="titles">
+      <a href="/" class="logo"><span class="mk"><i></i><i></i></span><span>Poker<b>Zin</b></span></a>
+      <h2 id="roomTitle"></h2>
+    </div>
+    <div class="actions">
+      <button class="btn accent" id="inviteBtn">Convidar 🔗</button>
+      <button class="btn icon" id="historyBtn" title="Histórico">📋</button>
+      <button class="btn icon" id="settingsBtn" title="Configurações da sala">⚙️</button>
+      <button class="me-btn" id="meBtn" title="Editar meu perfil"><span id="meAvatar"></span></button>
+    </div>
+  </header>
+  <div class="layout" id="layout">
+    <main class="game">
+      <div class="story">
+        <span class="num-tag" id="storyNum">01</span>
+        <input class="input" type="text" id="storyInput" placeholder="Qual tarefa estamos estimando?" maxlength="200">
+      </div>
+      <div class="arena">
+        <div class="seats" id="seatsTop"></div>
+        <div class="table panel"><div id="tableCenter" class="center"></div></div>
+        <div class="seats" id="seatsBottom"></div>
+      </div>
+      <div class="results panel hidden" id="results"></div>
+    </main>
+    <aside class="side panel" id="side">
+      <div class="side-head"><h3>Histórico</h3><button class="btn chip" id="exportBtn">⬇ CSV</button></div>
+      <div class="total" id="total"></div>
+      <div id="historyList"></div>
+    </aside>
+  </div>
+  <div class="hand" id="hand">
+    <div class="hand-top"><span id="handLabel"></span><span class="pill-timer hidden" id="handTimer"></span></div>
+    <div class="cards" id="cards"></div>
+    <form class="custom-pop panel hidden" id="customBox">
+      <input class="input" type="text" inputmode="decimal" id="customInput" placeholder="ex.: 3" maxlength="7" autocomplete="off">
+      <button class="btn primary">Votar</button>
+      <button class="btn ghost icon" type="button" id="customCancel">✕</button>
+    </form>
+  </div>
+</section>
+
+<!-- ================= DIÁLOGOS ================= -->
 <dialog id="joinDialog">
   <form method="dialog" id="joinForm">
-    <h3>Entrar na sala</h3>
-    <label class="field"><span>Seu nome</span><input type="text" id="joinName" maxlength="30" required autofocus></label>
-    <label class="check"><input type="checkbox" id="joinSpectator"> Entrar como espectador (não vota)</label>
-    <p id="joinError" style="color:var(--warn)" class="hidden"></p>
-    <div class="row"><button class="btn primary big" value="ok">Entrar</button></div>
+    <div class="pv" id="joinAvatar"></div>
+    <input class="input name-input" type="text" id="joinName" maxlength="30" required placeholder="Seu nome" autocomplete="nickname">
+    <div class="swatches" id="swatches"></div>
+    <div class="emojis" id="emojis"></div>
+    <div class="join-extra">
+      <button type="button" class="btn chip" id="photoBtn">📷 Usar uma foto</button>
+      <input type="file" id="photoInput" accept="image/*" hidden>
+      <label class="switch"><input type="checkbox" id="joinSpectator"> Espectador (não vota)</label>
+    </div>
+    <p id="joinError" class="err hidden"></p>
+    <button class="ok-fab" value="ok" title="Entrar">✓</button>
   </form>
 </dialog>
 
 <dialog id="settingsDialog">
-  <form method="dialog" id="settingsForm">
+  <form method="dialog">
     <h3>Configurações da sala</h3>
-    <label class="field"><span>Nome da sala</span><input type="text" id="setName" maxlength="60"></label>
-    <label class="field"><span>Cartas (separadas por vírgula)</span><input type="text" id="setCards"></label>
-    <label class="field"><span>Unidade (ex.: h, pts — opcional)</span><input type="text" id="setUnit" maxlength="4"></label>
-    <label class="check"><input type="checkbox" id="setAllowCustom"> Permitir “outro valor”</label>
+    <label class="field"><span class="label">Nome da sala</span><input class="input" type="text" id="setName" maxlength="60"></label>
+    <label class="field"><span class="label">Cartas (separadas por vírgula)</span><input class="input" type="text" id="setCards"></label>
+    <label class="field"><span class="label">Unidade (ex.: h, pts — opcional)</span><input class="input" type="text" id="setUnit" maxlength="4"></label>
+    <label class="switch"><input type="checkbox" id="setAllowCustom"> Permitir “outro valor”</label>
+    <label class="switch"><input type="checkbox" id="setAutoReveal"> Revelar as cartas quando o timer acabar</label>
     <div class="row">
       <button class="btn" value="cancel" formnovalidate>Cancelar</button>
       <button class="btn primary" value="ok">Salvar</button>
@@ -220,9 +405,9 @@
 <dialog id="playerDialog">
   <form method="dialog">
     <h3 id="playerDialogTitle"></h3>
-    <div class="row" style="justify-content:stretch;flex-direction:column">
+    <div class="menu-list">
       <button class="btn" value="host">👑 Tornar facilitador</button>
-      <button class="btn" value="kick" style="color:var(--warn)">Remover da sala</button>
+      <button class="btn" value="kick" style="color:var(--danger)">🚪 Remover da sala</button>
       <button class="btn ghost" value="cancel">Cancelar</button>
     </div>
   </form>
@@ -235,112 +420,229 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    set(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
   const toast = msg => {
+    document.querySelectorAll('.toast').forEach(t => t.remove());
     const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
-    document.body.appendChild(t); setTimeout(() => t.remove(), 1800);
+    document.body.appendChild(t); setTimeout(() => t.remove(), 2000);
   };
-  const num = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) && String(v).trim() !== '' ? n : null; };
+  const num = v => { const s = String(v ?? '').trim().replace(',', '.'); const n = Number(s); return s !== '' && Number.isFinite(n) ? n : null; };
   const fmt = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
   const showVal = v => String(v).replace('.', ',');
+  const fmtTime = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+  // ---------- Cores das cartas (degradê azul → verde → amarelo → laranja) ----------
+  const PALETTE = ['#2f7cf6', '#1e95f0', '#0ea5e9', '#06b6d4', '#0f9fa0', '#14b8a6', '#22c55e', '#84cc16', '#d4e317', '#facc15', '#f59e0b', '#f97316', '#ef4444'];
+  const SPECIAL = { '?': ['#3a3f4b', '#23262e'], '☕': ['#b9a597', '#9b887a'] };
+  const isLight = hex => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) > 175; };
+  function cardColor(v, deck) {
+    if (SPECIAL[v]) return { bg: `linear-gradient(160deg, ${SPECIAL[v][0]}, ${SPECIAL[v][1]})`, solid: SPECIAL[v][0], ink: '#fff' };
+    const normal = deck.filter(c => !SPECIAL[c]);
+    let i = normal.indexOf(v);
+    if (i < 0) { // valor customizado: posiciona entre as cartas numéricas vizinhas
+      const n = num(v), nums = normal.map(num);
+      i = n === null ? 0 : Math.max(0, nums.filter(x => x !== null && x <= n).length - 1);
+    }
+    const t = normal.length > 1 ? i / (normal.length - 1) : 0;
+    const c = PALETTE[Math.round(t * (PALETTE.length - 1))];
+    return { bg: `linear-gradient(160deg, ${c}, color-mix(in srgb, ${c} 78%, #000))`, solid: c, ink: isLight(c) ? '#3b3a10' : '#fff' };
+  }
+
+  // ---------- Avatares ----------
+  const COLORS = ['#f6c2c2', '#f3b9d2', '#dcc0ec', '#c9c3ef', '#bcc6ee', '#b7d7f7', '#a9def3', '#a8e6e4', '#b3e2d1', '#c7e8c1', '#d9eeb4', '#cfe23a', '#fbf1b4', '#fae0a3', '#f8cca2', '#f7b8a8', '#d6cfcb', '#d9dee5', '#c2ccd6'];
+  const EMOJIS = ['🐻', '🐱', '🐶', '🐮', '🐭', '🐼', '🐰', '🦊', '🐺', '🐯', '🦁', '🐸', '🐵', '🐨', '🐷', '🦉', '🐧', '🦄', '🐙', '🦖',
+    '🧑‍💻', '👩‍💻', '👨‍💻', '🧔', '👩', '👨', '🧑', '👩‍🦰', '👨‍🦱', '👩‍🦱', '👨‍🦰', '👩‍🦳', '🧑‍🦲', '👱‍♀️', '👱', '🧕', '🥷', '🦸', '🧙', '🧑‍🚀',
+    '🤖', '👽', '👾', '🤠', '😎', '🤓', '🥸', '😺', '🎃', '🐝'];
+  const hue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => [...w][0]).join('').toUpperCase() || '?';
+  function parseAv(av) {
+    if (typeof av !== 'string') return null;
+    if (av.startsWith('data:image/')) return { photo: av };
+    const m = av.match(/^emoji:(.+):(#[0-9a-fA-F]{6})$/);
+    return m ? { emoji: m[1], color: m[2] } : null;
+  }
+  function avatarHTML(name, av) {
+    const a = parseAv(av);
+    if (a?.photo) return `<span class="avatar"><img src="${esc(a.photo)}" alt=""></span>`;
+    if (a?.emoji) return `<span class="avatar" style="background:${esc(a.color)}">${esc(a.emoji)}</span>`;
+    const h = hue(name);
+    return `<span class="avatar ini" style="background:linear-gradient(135deg,hsl(${h} 70% 62%),hsl(${(h + 45) % 360} 70% 50%))">${esc(initials(name))}</span>`;
+  }
+  function resizePhoto(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const S = 128, c = document.createElement('canvas'); c.width = c.height = S;
+        const side = Math.min(img.width, img.height);
+        c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(); };
+      img.src = url;
+    });
+  }
+
+  // ---------- Som & confete ----------
+  let audioCtx;
+  function beep() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      [0, .18].forEach(d => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + d;
+        o.type = 'sine'; o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.18, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .16);
+        o.start(t); o.stop(t + .17);
+      });
+    } catch {}
+  }
+  function confetti() {
+    const cv = document.createElement('canvas'); cv.id = 'confetti'; document.body.appendChild(cv);
+    const ctx = cv.getContext('2d'); const W = cv.width = innerWidth, H = cv.height = innerHeight;
+    const ps = Array.from({ length: 150 }, () => ({ x: W / 2 + (Math.random() - .5) * 240, y: H * .42, vx: (Math.random() - .5) * 15, vy: -Math.random() * 14 - 4, s: Math.random() * 7 + 4, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: PALETTE[Math.random() * PALETTE.length | 0] }));
+    const t0 = performance.now();
+    (function frame(t) {
+      ctx.clearRect(0, 0, W, H);
+      ps.forEach(p => { p.vy += .35; p.x += p.vx; p.y += p.vy; p.vx *= .99; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+      if (t - t0 < 2600) requestAnimationFrame(frame); else cv.remove();
+    })(t0);
+  }
+
+  // ---------- Estado ----------
   const socket = io();
-  let state = null;
+  let state = null, avatars = {};
   let myId = store.get('pp_clientId', null);
-  let roomId = null;
-  let joined = false;
+  let myAvatar = store.get('pp_avatar', null);
+  if (!parseAv(myAvatar)) { // avatar inicial aleatório e colorido
+    myAvatar = `emoji:${EMOJIS[Math.random() * 20 | 0]}:${COLORS[Math.random() * COLORS.length | 0]}`;
+    store.set('pp_avatar', myAvatar);
+  }
+  let roomId = null, joined = false;
   let showSide = store.get('pp_showSide', true);
-  let lastSavedSuggestion = null;
+  let clockOffset = 0, suggestion = null, animateReveal = false, beepedFor = null;
 
-  // ---------- Roteamento ----------
-  const m = location.pathname.match(/^\/sala\/([a-f0-9]+)/);
-  if (m) { roomId = m[1]; $('room').classList.remove('hidden'); openJoin(); }
-  else { $('home').classList.remove('hidden'); initHome(); }
 
   // ---------- Home ----------
   function initHome() {
+    const fanDeck = ['1', '2', '3', '5', '8', '13'];
+    $('fan').innerHTML = fanDeck.map((v, i) => {
+      const c = cardColor(v, fanDeck), rot = (i - 2.5) * 8;
+      return `<div class="c" style="left:${i * 62}px;background:${c.bg};color:${c.ink};transform:rotate(${rot}deg)${i === 2 ? ' translateY(-18px)' : ''}">${v}</div>`;
+    }).join('');
     socket.emit('decks', decks => {
-      const opts = Object.entries(decks).map(([k, d], i) => `
+      $('deckOptions').innerHTML = Object.entries(decks).map(([k, d], i) => `
         <label class="deck-opt"><input type="radio" name="deck" value="${k}" ${i === 0 ? 'checked' : ''}>
-          <span><b>${esc(d.label)}</b><small>${d.cards.map(esc).join(' · ')}</small></span></label>`).join('')
-        + `<label class="deck-opt"><input type="radio" name="deck" value="custom">
-          <span><b>Personalizado</b><small>Defina suas próprias cartas</small></span></label>`;
-      $('deckOptions').innerHTML = opts;
-      $('deckOptions').addEventListener('change', () => {
-        const v = document.querySelector('input[name=deck]:checked').value;
-        $('customDeckField').classList.toggle('hidden', v !== 'custom');
-      });
+          <b>${esc(d.label)}</b><span class="minis">${d.cards.slice(0, 8).map(c => { const cc = cardColor(c, d.cards); return `<span style="background:${cc.solid};color:${cc.ink}">${esc(showVal(c))}</span>`; }).join('')}</span></label>`).join('')
+        + `<label class="deck-opt"><input type="radio" name="deck" value="custom"><b>Personalizado</b><span class="minis"><span style="background:#94a3b8">suas cartas</span></span></label>`;
+    });
+    $('deckOptions').addEventListener('change', () => {
+      $('customDeckField').classList.toggle('hidden', document.querySelector('input[name=deck]:checked').value !== 'custom');
     });
     $('createForm').addEventListener('submit', e => {
       e.preventDefault();
-      const deckType = document.querySelector('input[name=deck]:checked')?.value || 'horas';
       socket.emit('create_room', {
         name: $('roomName').value,
-        deckType,
+        deckType: document.querySelector('input[name=deck]:checked')?.value || 'horas',
         cards: $('customDeck').value.split(','),
-        unit: '',
         allowCustom: $('allowCustom').checked,
       }, res => { if (res.ok) location.href = '/sala/' + res.id; });
     });
   }
 
-  // ---------- Entrar ----------
+  // ---------- Perfil / entrar ----------
+  let draft = null; // { emoji, color } ou { photo }
+  function renderJoin() {
+    $('joinAvatar').innerHTML = avatarHTML($('joinName').value || '?', draft.photo || `emoji:${draft.emoji}:${draft.color}`);
+    $('swatches').innerHTML = COLORS.map(c => `<button type="button" class="sw ${!draft.photo && draft.color === c ? 'sel' : ''}" data-c="${c}" style="background:${c}" title="Cor de fundo"></button>`).join('');
+    $('emojis').innerHTML = EMOJIS.map(e => `<button type="button" class="emo ${!draft.photo && draft.emoji === e ? 'sel' : ''}" data-e="${e}">${e}</button>`).join('');
+    $('photoBtn').textContent = draft.photo ? '🗑 Remover foto' : '📷 Usar uma foto';
+  }
   function openJoin(err) {
     $('joinName').value = store.get('pp_name', '');
     $('joinSpectator').checked = store.get('pp_spectator', false);
+    const a = parseAv(myAvatar) || { emoji: EMOJIS[0], color: COLORS[11] };
+    draft = a.photo ? { photo: a.photo, emoji: EMOJIS[0], color: COLORS[11] } : { emoji: a.emoji, color: a.color };
+    renderJoin();
     $('joinError').textContent = err || '';
     $('joinError').classList.toggle('hidden', !err);
     if (!$('joinDialog').open) $('joinDialog').showModal();
+    $('joinName').focus();
   }
-  $('joinDialog').addEventListener('cancel', e => e.preventDefault());
+  $('joinName').addEventListener('input', () => $('joinAvatar').innerHTML = avatarHTML($('joinName').value || '?', draft.photo || `emoji:${draft.emoji}:${draft.color}`));
+  $('swatches').addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; draft.color = b.dataset.c; draft.photo = null; renderJoin(); });
+  $('emojis').addEventListener('click', e => { const b = e.target.closest('.emo'); if (!b) return; draft.emoji = b.dataset.e; draft.photo = null; renderJoin(); });
+  $('photoBtn').onclick = () => { if (draft.photo) { draft.photo = null; renderJoin(); } else $('photoInput').click(); };
+  $('photoInput').addEventListener('change', async () => {
+    const f = $('photoInput').files[0]; $('photoInput').value = '';
+    if (!f) return;
+    try { draft.photo = await resizePhoto(f); renderJoin(); }
+    catch { toast('Não consegui ler essa imagem'); }
+  });
+  $('joinDialog').addEventListener('cancel', e => { if (!joined) e.preventDefault(); });
   $('joinForm').addEventListener('submit', e => {
     const name = $('joinName').value.trim();
-    if (!name) { e.preventDefault(); return; }
+    if (!name) { e.preventDefault(); $('joinName').focus(); return; }
     store.set('pp_name', name);
     store.set('pp_spectator', $('joinSpectator').checked);
+    myAvatar = draft.photo || `emoji:${draft.emoji}:${draft.color}`;
+    store.set('pp_avatar', myAvatar);
     doJoin();
   });
   function doJoin() {
-    socket.emit('join', { roomId, clientId: myId, name: store.get('pp_name', ''), spectator: store.get('pp_spectator', false) }, res => {
+    socket.emit('join', { roomId, clientId: myId, name: store.get('pp_name', ''), spectator: store.get('pp_spectator', false), avatar: myAvatar }, res => {
       if (!res.ok) { joined = false; openJoin(res.error); return; }
       myId = res.clientId; store.set('pp_clientId', myId); joined = true;
     });
   }
   socket.on('connect', () => { if (joined) doJoin(); });
   socket.on('kicked', () => { joined = false; alert('Você foi removido da sala.'); location.href = '/'; });
+  socket.on('avatars', map => { avatars = map || {}; render(); });
 
   // ---------- Header ----------
   $('inviteBtn').onclick = async () => {
-    try { await navigator.clipboard.writeText(location.href); toast('Link copiado!'); }
+    try { await navigator.clipboard.writeText(location.href); toast('🔗 Link copiado! Mande para o time.'); }
     catch { prompt('Copie o link da sala:', location.href); }
   };
   $('historyBtn').onclick = () => { showSide = !showSide; store.set('pp_showSide', showSide); render(); };
   $('meBtn').onclick = () => openJoin();
   $('settingsBtn').onclick = () => {
     if (!state) return;
-    if (state.hostId !== myId) { toast('Somente o facilitador 👑 altera a sala'); return; }
     $('setName').value = state.name;
     $('setCards').value = state.deck.join(', ');
     $('setUnit').value = state.unit || '';
     $('setAllowCustom').checked = state.allowCustom;
+    $('setAutoReveal').checked = state.autoReveal;
     $('settingsDialog').showModal();
   };
   $('settingsDialog').addEventListener('close', () => {
     if ($('settingsDialog').returnValue !== 'ok') return;
     socket.emit('update_settings', {
-      name: $('setName').value, cards: $('setCards').value.split(','),
-      unit: $('setUnit').value, allowCustom: $('setAllowCustom').checked,
+      name: $('setName').value, cards: $('setCards').value.split(','), unit: $('setUnit').value,
+      allowCustom: $('setAllowCustom').checked, autoReveal: $('setAutoReveal').checked,
     });
   });
 
-  // ---------- Tarefa ----------
   $('storyInput').addEventListener('input', () => socket.emit('set_story', $('storyInput').value));
+
+  // ---------- Mesa (ações) ----------
+  $('tableCenter').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const a = b.dataset.act;
+    if (a === 'reveal') socket.emit('reveal');
+    if (a === 'new') socket.emit('new_round');
+    if (a === 'tstart') socket.emit('timer_start', Number(b.dataset.s));
+    if (a === 'tadd') socket.emit('timer_add', 30);
+    if (a === 'tstop') socket.emit('timer_stop');
+    if (!audioCtx) try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+  });
 
   // ---------- Votação ----------
   $('cards').addEventListener('click', e => {
-    const b = e.target.closest('button.card'); if (!b || b.disabled) return;
-    if (b.dataset.custom) { toggleCustom(true); return; }
+    const b = e.target.closest('button.card'); if (!b) return;
+    if (b.dataset.custom) { toggleCustom($('customBox').classList.contains('hidden')); return; }
     toggleCustom(false);
     socket.emit('vote', b.dataset.v);
   });
@@ -367,9 +669,8 @@
   });
   $('playerDialog').addEventListener('close', () => {
     const v = $('playerDialog').returnValue;
-    if (!targetPlayer) return;
-    if (v === 'host') socket.emit('make_host', targetPlayer.id);
-    if (v === 'kick') socket.emit('kick', targetPlayer.id);
+    if (targetPlayer && v === 'host') socket.emit('make_host', targetPlayer.id);
+    if (targetPlayer && v === 'kick') socket.emit('kick', targetPlayer.id);
     targetPlayer = null;
   });
 
@@ -379,57 +680,95 @@
     if (confirm('Remover esta tarefa do histórico?')) socket.emit('remove_history', Number(b.dataset.i));
   });
   $('exportBtn').onclick = () => {
-    if (!state?.history.length) { toast('Histórico vazio'); return; }
+    if (!state?.history.length) { toast('O histórico está vazio'); return; }
     const q = s => '"' + String(s).replace(/"/g, '""') + '"';
     const rows = [['Tarefa', 'Estimativa', 'Unidade', 'Votos', 'Data']]
       .concat([...state.history].reverse().map(h => [h.story, showVal(h.value), h.unit || '',
         h.votes.map(v => `${v.name}: ${showVal(v.vote)}`).join(' | '), new Date(h.at).toLocaleString('pt-BR')]));
     const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `planning-poker-${(state.name || 'sala').replace(/\W+/g, '-')}.csv`; a.click();
+    a.download = `pokerzin-${(state.name || 'sala').replace(/\W+/g, '-')}.csv`; a.click();
   };
 
-  // ---------- Estado ----------
+  // ---------- Recebendo estado ----------
   socket.on('state', s => {
-    const prevRevealed = state?.revealed;
+    const was = state;
+    clockOffset = s.now - Date.now();
+    animateReveal = !!(was && !was.revealed && s.revealed);
+    if (!s.revealed || !was?.revealed) suggestion = null;
     state = s;
-    if (!s.revealed || !prevRevealed) lastSavedSuggestion = null;
     render();
+    if (animateReveal) {
+      const st = stats();
+      if (st.consensus && st.voters.length > 1) setTimeout(confetti, 450);
+    }
+    animateReveal = false;
   });
 
   function stats() {
     const voters = state.players.filter(p => !p.spectator && p.vote !== null);
     const nums = voters.map(p => num(p.vote)).filter(n => n !== null);
-    const counts = {};
-    voters.forEach(p => counts[p.vote] = (counts[p.vote] || 0) + 1);
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1] || (num(a[0]) ?? 1e9) - (num(b[0]) ?? 1e9));
+    const groups = {};
+    voters.forEach(p => (groups[p.vote] = groups[p.vote] || []).push(p));
+    const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length || (num(a[0]) ?? 1e9) - (num(b[0]) ?? 1e9));
     const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
-    const consensus = voters.length > 0 && sorted.length === 1;
-    return { voters, nums, sorted, avg, min: nums.length ? Math.min(...nums) : null, max: nums.length ? Math.max(...nums) : null, consensus };
+    return {
+      voters, sorted, avg,
+      min: nums.length ? Math.min(...nums) : null, max: nums.length ? Math.max(...nums) : null,
+      consensus: voters.length > 0 && sorted.length === 1,
+      agreement: voters.length ? Math.round(sorted[0][1].length / voters.length * 100) : 0,
+    };
   }
+
+  const timeLeft = () => state?.timer ? Math.max(0, state.timer.endsAt - (Date.now() + clockOffset)) : null;
+  const C = 2 * Math.PI * 34;
+  function updateTimer() {
+    const left = timeLeft();
+    const pill = $('handTimer');
+    if (left === null) { pill.classList.add('hidden'); return; }
+    const sec = Math.ceil(left / 1000);
+    const level = sec <= 5 ? 'danger' : sec <= 10 ? 'warn' : '';
+    const el = $('timer');
+    if (el) {
+      el.className = 'timer ' + level;
+      $('timerText').textContent = fmtTime(sec);
+      $('timerRing').style.strokeDashoffset = C * (1 - left / state.timer.duration);
+    }
+    pill.textContent = '⏱ ' + fmtTime(sec);
+    pill.className = 'pill-timer ' + level;
+    if (left === 0 && beepedFor !== state.timer.endsAt) { beepedFor = state.timer.endsAt; beep(); }
+  }
+  setInterval(updateTimer, 200);
 
   function render() {
     if (!state) return;
-    const u = state.unit ? state.unit : '';
-    document.title = `${state.name} · Planning Poker`;
-    $('roomTitle').textContent = state.name;
+    const u = state.unit || '';
+    const unitOf = v => num(v) !== null ? u : '';
+    const isHost = state.hostId === myId;
     const me = state.players.find(p => p.id === myId);
-    $('meName').textContent = me ? me.name + (me.spectator ? ' (espectador)' : '') : '';
-    $('settingsBtn').classList.toggle('hidden', state.hostId !== myId);
+    document.title = `${state.name} · PokerZin`;
+    $('roomTitle').textContent = state.name;
+    $('meAvatar').innerHTML = avatarHTML(me?.name || store.get('pp_name', '?'), myAvatar);
+    $('settingsBtn').classList.toggle('hidden', !isHost);
+    $('storyNum').textContent = String(state.history.length + 1).padStart(2, '0');
     if (document.activeElement !== $('storyInput')) $('storyInput').value = state.story;
 
     // Assentos
     const players = [...state.players].sort((a, b) => a.spectator - b.spectator);
     const half = Math.ceil(players.length / 2);
     const seat = p => {
-      let card;
-      if (p.spectator) card = `<div class="mini-card spect">👀</div>`;
-      else if (state.revealed && p.vote !== null) card = `<div class="mini-card shown">${esc(showVal(p.vote))}</div>`;
-      else card = `<div class="mini-card ${p.voted ? 'voted' : ''}"></div>`;
-      const menu = state.hostId === myId && p.id !== myId ? `<button class="seat-menu" data-id="${esc(p.id)}" title="Opções">⋯</button>` : '';
-      return `<div class="seat ${p.online ? '' : 'offline'}">${menu}${card}
-        <div class="name">${p.host ? '👑 ' : ''}${esc(p.name)}${p.id === myId ? ' (você)' : ''}</div>
-        ${p.online ? '' : '<div class="tag">offline</div>'}</div>`;
+      const av = avatarHTML(p.name, avatars[p.id]);
+      const shown = state.revealed && p.vote !== null && !p.spectator;
+      const col = shown ? cardColor(p.vote, state.deck) : null;
+      const voted = p.voted && !state.revealed;
+      const menu = isHost && p.id !== myId ? `<button class="seat-menu" data-id="${esc(p.id)}" title="Opções">⋯</button>` : '';
+      return `<div class="seat ${p.online ? '' : 'offline'} ${p.id === myId ? 'me' : ''}" title="${esc(p.name)}${p.spectator ? ' (espectador)' : ''}${p.online ? '' : ' (offline)'}">
+        <div class="tile ${voted ? 'voted' : ''} ${shown ? 'shown' : ''} ${shown && animateReveal ? 'anim' : ''} ${p.spectator ? 'spect' : ''}">${menu}
+          ${p.host ? '<span class="crown" title="Facilitador">👑</span>' : ''}${voted ? '<span class="check">✓</span>' : ''}
+          <div class="in"><div class="f back">${av}${p.spectator ? '<span class="small" style="position:absolute;bottom:6px">👀</span>' : ''}</div>
+            <div class="f front" style="${col ? `background:${col.bg};color:${col.ink}` : ''}">${shown ? esc(showVal(p.vote)) : ''}${shown ? av : ''}</div></div>
+        </div>
+        <div class="name">${esc(p.name)}</div></div>`;
     };
     $('seatsTop').innerHTML = players.slice(0, half).map(seat).join('');
     $('seatsBottom').innerHTML = players.slice(half).map(seat).join('');
@@ -437,80 +776,106 @@
     // Centro da mesa
     const voters = state.players.filter(p => !p.spectator);
     const votedCount = voters.filter(p => p.voted).length;
-    let center;
-    if (state.revealed) center = `<button class="btn primary big" id="newRoundBtn">Nova votação</button>`;
-    else if (votedCount === 0) center = `<div class="hint">Escolham suas cartas!<br><small>${voters.length} votante(s) na mesa</small></div>`;
-    else center = `<div><button class="btn primary big" id="revealBtn">Revelar cartas</button>
-      <div class="hint" style="margin-top:8px"><small>${votedCount} de ${voters.length} votaram</small></div></div>`;
-    $('tableCenter').innerHTML = center;
-    $('revealBtn')?.addEventListener('click', () => socket.emit('reveal'));
-    $('newRoundBtn')?.addEventListener('click', () => socket.emit('new_round'));
+    const running = !!state.timer;
+    const timerRing = running ? `<div class="timer" id="timer"><svg viewBox="0 0 80 80"><circle class="trk" cx="40" cy="40" r="34"/>
+        <circle class="prog" id="timerRing" cx="40" cy="40" r="34" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg>
+        <span class="t" id="timerText">–</span></div>` : '';
+    let action;
+    if (state.revealed) action = `<button class="btn big" data-act="new">↻ Nova votação</button>`;
+    else if (votedCount === 0) action = `<div><div class="hint">Escolha uma carta abaixo 👇</div><div class="small">${voters.length} votante(s) na mesa</div></div>`;
+    else action = `<div><button class="btn primary big" data-act="reveal">Revelar cartas</button>
+        <div class="progress"><span style="width:${votedCount / voters.length * 100}%"></span></div>
+        <div class="small">${votedCount} de ${voters.length} votaram</div></div>`;
+    let tbar = '';
+    if (!state.revealed) {
+      tbar = running
+        ? `<div class="timer-bar"><button class="btn chip" data-act="tadd">+30s</button><button class="btn chip" data-act="tstop">■ Parar</button></div>`
+        : `<div class="timer-bar"><span class="lbl">⏱ Timer</span>${[[30, '30s'], [60, '1 min'], [120, '2 min'], [300, '5 min']]
+            .map(([s, l]) => `<button class="btn chip" data-act="tstart" data-s="${s}">${l}</button>`).join('')}</div>`;
+    }
+    $('tableCenter').innerHTML = `${state.expired && !state.revealed ? '<div class="expired">⏰ Tempo esgotado!</div>' : ''}
+      <div class="center-main">${timerRing}${action}</div>${tbar}`;
+    updateTimer();
 
     // Resultados
     const res = $('results');
     if (state.revealed) {
       const s = stats();
-      const maxCount = s.sorted.length ? s.sorted[0][1] : 1;
-      let suggestion = '';
-      if (s.consensus) suggestion = s.sorted[0][0];
-      else if (s.avg !== null) suggestion = String(Math.round(s.avg * 2) / 2);
-      if (lastSavedSuggestion === null) lastSavedSuggestion = suggestion;
+      if (suggestion === null) suggestion = s.consensus ? s.sorted[0][0] : s.avg !== null ? String(Math.round(s.avg * 2) / 2) : '';
       const prevInput = $('finalValue')?.value;
+      const maxCount = s.sorted.length ? s.sorted[0][1].length : 1;
       res.innerHTML = `
-        <div class="stats">
-          <div class="stat"><small>Média</small><b>${s.avg === null ? '–' : fmt(s.avg) + esc(u)}</b></div>
-          <div class="stat"><small>Mín · Máx</small><b>${s.min === null ? '–' : `${fmt(s.min)} · ${fmt(s.max)}`}</b></div>
-          <div class="stat"><small>Votos</small><b>${s.voters.length}</b></div>
-          <div class="stat"><small>Consenso</small><b>${s.consensus ? '🎉 Sim' : s.voters.length ? 'Não' : '–'}</b></div>
+        <div class="res-top">
+          <div class="avg"><small>Média</small><div class="big">${s.avg === null ? '–' : fmt(s.avg) + `<span>${esc(u)}</span>`}</div>
+            ${s.consensus && s.voters.length > 1 ? '<div class="consensus">🎉 Consenso!</div>' : ''}</div>
+          <div class="chips">
+            <div class="chip-s"><small>Mínimo</small><b>${s.min === null ? '–' : fmt(s.min)}</b></div>
+            <div class="chip-s"><small>Máximo</small><b>${s.max === null ? '–' : fmt(s.max)}</b></div>
+            <div class="chip-s"><small>Votos</small><b>${s.voters.length}</b></div>
+            <div class="chip-s"><small>Concordância</small><b>${s.voters.length ? s.agreement + '%' : '–'}</b></div>
+          </div>
         </div>
-        <div class="bars">${s.sorted.map(([v, c]) => `
-          <div class="bar"><span class="v">${esc(showVal(v))}${num(v) !== null ? esc(u) : ''}</span>
-            <span class="track"><span class="fill" style="width:${(c / maxCount) * 100}%;display:block"></span></span>
-            <span class="c">${c} voto${c > 1 ? 's' : ''}</span></div>`).join('') || '<p class="empty">Ninguém votou nesta rodada.</p>'}
+        <div class="dist">${s.sorted.map(([v, ps]) => { const c = cardColor(v, state.deck); return `
+          <div class="drow"><span class="v" style="background:${c.bg};color:${c.ink}">${esc(showVal(v))}</span>
+            <span class="track"><span class="fill" style="width:${ps.length / maxCount * 100}%;background:${c.bg}"></span></span>
+            <span class="who"><span class="stack">${ps.slice(0, 6).map(p => avatarHTML(p.name, avatars[p.id])).join('')}</span>
+              <span class="small">${ps.length}</span></span></div>`; }).join('') || '<p class="empty">Ninguém votou nesta rodada.</p>'}
         </div>
         <form class="save-row" id="saveForm">
-          <b>Estimativa final:</b>
-          <input type="text" id="finalValue" maxlength="10" value="${esc(showVal(prevInput !== undefined ? prevInput : lastSavedSuggestion))}">
-          ${u ? `<span>${esc(u)}</span>` : ''}
-          <button class="btn primary">Salvar no histórico e próxima tarefa</button>
+          <b>Estimativa final</b>
+          <input class="input" type="text" id="finalValue" maxlength="10" value="${esc(showVal(prevInput !== undefined ? prevInput : suggestion))}">
+          ${u ? `<span class="small">${esc(u)}</span>` : ''}
+          <button class="btn primary" style="margin-left:auto">✓ Salvar e próxima tarefa</button>
         </form>`;
       res.classList.remove('hidden');
+      res.style.animation = animateReveal ? '' : 'none';
+      res.querySelectorAll('.fill').forEach(f => { if (!animateReveal) f.style.animation = 'none'; });
       $('saveForm').addEventListener('submit', e => {
         e.preventDefault();
         const v = $('finalValue').value.trim();
         if (!v) { toast('Informe a estimativa final'); return; }
         socket.emit('save_estimate', { value: num(v) !== null ? String(num(v)) : v });
-        toast('Estimativa salva ✔');
+        toast('✓ Estimativa salva no histórico');
       });
     } else { res.classList.add('hidden'); res.innerHTML = ''; }
 
     // Mão de cartas
-    const spect = !me || me.spectator;
-    $('hand').classList.toggle('hidden', spect || state.revealed);
-    const sel = me?.vote ?? null; // o servidor envia o seu próprio voto
-    const isCustomVote = sel !== null && sel !== undefined && !state.deck.includes(sel);
-    $('cards').innerHTML = state.deck.map(c =>
-      `<button class="card ${sel === c ? 'sel' : ''}" data-v="${esc(c)}" ${state.revealed ? 'disabled' : ''}>${esc(showVal(c))}</button>`).join('')
-      + (state.allowCustom ? `<button class="card custom ${isCustomVote ? 'sel' : ''}" data-custom="1" ${state.revealed ? 'disabled' : ''}>
-          ${isCustomVote ? esc(showVal(sel)) + esc(u) : 'Outro<br>valor'}</button>` : '');
-    $('handLabel').textContent = state.revealed ? 'Cartas reveladas — inicie uma nova votação para votar de novo'
-      : sel != null ? `Seu voto: ${showVal(sel)}${num(sel) !== null ? u : ''} (clique de novo para desmarcar)` : 'Escolha sua carta 👇';
-    if (state.revealed) toggleCustom(false);
+    const showHand = me && !me.spectator && !state.revealed;
+    $('hand').classList.toggle('hidden', !showHand);
+    const sel = me?.vote ?? null;
+    const isCustomVote = sel !== null && !state.deck.includes(sel);
+    const n = state.deck.length + (state.allowCustom ? 1 : 0);
+    $('cards').style.setProperty('--n', n);
+    $('cards').innerHTML = state.deck.map((c, i) => {
+      const col = cardColor(c, state.deck), r = ((i - (n - 1) / 2) * 0.8).toFixed(1);
+      return `<button class="card ${sel === c ? 'sel' : ''}" data-v="${esc(c)}" style="background:${col.bg};color:${col.ink};--r:${r}deg">${esc(showVal(c))}</button>`;
+    }).join('')
+      + (state.allowCustom ? `<button class="card custom ${isCustomVote ? 'sel' : ''}" data-custom="1" style="--r:${((n - 1) / 2 * 0.8).toFixed(1)}deg" title="Votar um valor que não está no baralho">
+          ${isCustomVote ? `<span class="val">${esc(showVal(sel))}</span>` : '<span class="plus">+</span>Outro valor'}</button>` : '');
+    $('handLabel').innerHTML = sel !== null
+      ? `Seu voto: <b>${esc(showVal(sel))}${esc(unitOf(sel))}</b> <span class="muted">· clique de novo para desmarcar</span>`
+      : '<span class="muted">Escolha sua carta</span>';
+    if (!showHand) toggleCustom(false);
 
     // Histórico
+    document.body.classList.toggle('side-open', showSide);
     $('layout').classList.toggle('no-side', !showSide);
     $('side').classList.toggle('hidden', !showSide);
     const h = state.history;
     const total = h.reduce((a, x) => a + (num(x.value) ?? 0), 0);
-    $('total').innerHTML = `<span>${h.length} tarefa(s)</span><span>Total: ${fmt(total)}${esc(u)}</span>`;
-    $('historyList').innerHTML = h.length ? h.map((x, i) => `
+    $('total').innerHTML = `<small>Total estimado</small><b>${fmt(total)}${esc(u)}</b><br><span>${h.length} tarefa(s)</span>`;
+    $('historyList').innerHTML = h.length ? h.map((x, i) => { const c = cardColor(x.value, state.deck); return `
       <div class="hist-item"><div class="t">${esc(x.story)}
-        <small>${x.votes.map(v => esc(v.name) + ': ' + esc(showVal(v.vote))).join(' · ') || 'sem votos'}</small></div>
-        <span class="val">${esc(showVal(x.value))}${num(x.value) !== null ? esc(x.unit || '') : ''}</span>
-        <button class="x" data-i="${i}" title="Remover">✕</button></div>`).join('')
-      : '<p class="empty">As tarefas estimadas aparecem aqui.</p>';
+        <small>${x.votes.map(v => esc(v.name) + ' ' + esc(showVal(v.vote))).join(' · ') || 'sem votos'}</small></div>
+        <span class="val" style="background:${c.bg};color:${c.ink}">${esc(showVal(x.value))}${num(x.value) !== null ? esc(x.unit || '') : ''}</span>
+        <button class="x" data-i="${i}" title="Remover">✕</button></div>`; }).join('')
+      : '<div class="empty">As tarefas estimadas<br>aparecem aqui ✨</div>';
   }
 
+  // ---------- Roteamento (no fim, depois de tudo declarado) ----------
+  const m = location.pathname.match(/^\/sala\/([a-f0-9]+)/);
+  if (m) { roomId = m[1]; $('room').classList.remove('hidden'); openJoin(); }
+  else { $('home').classList.remove('hidden'); initHome(); }
 })();
 </script>
 </body>

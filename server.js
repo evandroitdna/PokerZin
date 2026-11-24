@@ -8,7 +8,7 @@ const { Server } = require('socket.io');
 const PORT = process.env.PORT || 3000;
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 200 * 1024 });
 
 app.get('/healthz', (_req, res) => res.send('ok'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -25,6 +25,13 @@ const DECKS = {
 const rooms = new Map();
 const OFFLINE_GRACE_MS = 60 * 1000;          // mantém o jogador 1 min após cair (reconexão)
 const EMPTY_ROOM_TTL_MS = 12 * 60 * 60 * 1000; // sala vazia some depois de 12h
+
+const MAX_AVATAR_CHARS = 80 * 1024; // foto já chega reduzida (≈96px) do navegador
+
+// Avatar: foto (data URL) ou "emoji:<emoji>:<#cor>"
+const cleanAvatar = a => (typeof a === 'string' && a.length <= MAX_AVATAR_CHARS &&
+  (/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(a) ||
+   /^emoji:[^:<>"'&]{1,16}:#[0-9a-fA-F]{6}$/.test(a))) ? a : null;
 
 const clean = (s, max = 60) => String(s ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, max);
 
@@ -61,6 +68,7 @@ function publicState(room, viewerId) {
     voted: p.vote !== null,
     vote: room.revealed || p.id === viewerId ? p.vote : null, // cada um vê o próprio voto
     host: p.id === room.hostId,
+    avatarRev: p.avatarRev, // a foto vai num evento separado ('avatars') para não pesar cada atualização
   }));
   return {
     id: room.id,
@@ -72,6 +80,10 @@ function publicState(room, viewerId) {
     story: room.story,
     history: room.history,
     hostId: room.hostId,
+    autoReveal: room.autoReveal,
+    timer: room.timer, // { endsAt, duration } em horário do servidor, ou null
+    expired: room.timerExpired,
+    now: Date.now(),
     players,
   };
 }
@@ -81,6 +93,47 @@ function broadcast(room) {
     const st = publicState(room, p.id);
     for (const sid of p.sockets) io.to(sid).emit('state', st);
   }
+}
+
+function sendAvatars(room) {
+  const map = {};
+  for (const p of room.players.values()) if (p.avatar) map[p.id] = p.avatar;
+  io.to(room.id).emit('avatars', map);
+}
+
+function stopTimer(room) {
+  clearTimeout(room.timerHandle);
+  room.timerHandle = null;
+  room.timer = null;
+  room.timerExpired = false;
+}
+
+function startTimer(room, seconds) {
+  clearTimeout(room.timerHandle);
+  const ms = seconds * 1000;
+  room.timer = { endsAt: Date.now() + ms, duration: ms };
+  room.timerExpired = false;
+  room.timerHandle = setTimeout(() => onTimerEnd(room), ms);
+}
+
+function onTimerEnd(room) {
+  room.timerHandle = null;
+  room.timer = null;
+  const anyVote = [...room.players.values()].some(p => p.vote !== null);
+  if (room.autoReveal && anyVote && !room.revealed) room.revealed = true;
+  else room.timerExpired = !room.revealed;
+  broadcast(room);
+}
+
+function reveal(room) {
+  stopTimer(room);
+  room.revealed = true;
+}
+
+function resetRound(room) {
+  stopTimer(room);
+  room.revealed = false;
+  for (const p of room.players.values()) p.vote = null;
 }
 
 function touch(room) {
@@ -108,6 +161,10 @@ io.on('connection', socket => {
       deck: cards,
       unit: preset ? preset.unit : clean(data?.unit, 4),
       allowCustom: data?.allowCustom !== false,
+      autoReveal: true,
+      timer: null,
+      timerHandle: null,
+      timerExpired: false,
       revealed: false,
       story: '',
       history: [],
@@ -126,14 +183,16 @@ io.on('connection', socket => {
     if (!name) return typeof cb === 'function' && cb({ ok: false, error: 'Informe seu nome.' });
     room = r;
     clientId = clean(data?.clientId, 64) || crypto.randomUUID();
+    const avatar = cleanAvatar(data?.avatar);
     let p = room.players.get(clientId);
     if (!p) {
-      p = { id: clientId, name, spectator: !!data?.spectator, vote: null, sockets: new Set(), leaveTimer: null };
+      p = { id: clientId, name, spectator: !!data?.spectator, vote: null, sockets: new Set(), leaveTimer: null, avatar, avatarRev: avatar ? 1 : 0 };
       room.players.set(clientId, p);
     } else {
       p.name = name;
       p.spectator = !!data?.spectator;
       if (p.spectator) p.vote = null;
+      if (avatar !== p.avatar) { p.avatar = avatar; p.avatarRev++; }
     }
     clearTimeout(p.leaveTimer);
     p.sockets.add(socket.id);
@@ -142,6 +201,7 @@ io.on('connection', socket => {
     touch(room);
     if (typeof cb === 'function') cb({ ok: true, clientId });
     broadcast(room);
+    sendAvatars(room);
   });
 
   socket.on('vote', value => {
@@ -161,16 +221,40 @@ io.on('connection', socket => {
 
   socket.on('reveal', () => {
     if (!me() || room.revealed) return;
-    room.revealed = true;
+    reveal(room);
     touch(room);
     broadcast(room);
   });
 
   socket.on('new_round', () => {
     if (!me()) return;
-    room.revealed = false;
-    for (const p of room.players.values()) p.vote = null;
+    resetRound(room);
     touch(room);
+    broadcast(room);
+  });
+
+  // Timer de votação: qualquer participante pode iniciar, somar tempo ou parar
+  socket.on('timer_start', seconds => {
+    const n = Math.round(Number(seconds));
+    if (!me() || room.revealed || !(n >= 5 && n <= 3600)) return;
+    startTimer(room, n);
+    touch(room);
+    broadcast(room);
+  });
+
+  socket.on('timer_add', seconds => {
+    const n = Math.round(Number(seconds));
+    if (!me() || !room.timer || !(n >= 5 && n <= 600)) return;
+    const left = Math.max(0, room.timer.endsAt - Date.now());
+    const duration = room.timer.duration + n * 1000;
+    startTimer(room, Math.min(3600, Math.round((left + n * 1000) / 1000)));
+    room.timer.duration = Math.min(duration, 3600 * 1000);
+    broadcast(room);
+  });
+
+  socket.on('timer_stop', () => {
+    if (!me()) return;
+    stopTimer(room);
     broadcast(room);
   });
 
@@ -195,8 +279,7 @@ io.on('connection', socket => {
     });
     room.history = room.history.slice(0, 200);
     room.story = '';
-    room.revealed = false;
-    for (const p of room.players.values()) p.vote = null;
+    resetRound(room);
     touch(room);
     broadcast(room);
   });
@@ -213,6 +296,7 @@ io.on('connection', socket => {
     if (cards.length) room.deck = cards;
     if (typeof data?.unit === 'string') room.unit = clean(data.unit, 4);
     if (typeof data?.allowCustom === 'boolean') room.allowCustom = data.allowCustom;
+    if (typeof data?.autoReveal === 'boolean') room.autoReveal = data.autoReveal;
     if (typeof data?.name === 'string' && clean(data.name)) room.name = clean(data.name);
     // votos que não existem mais no baralho (e não são numéricos válidos) são descartados
     for (const p of room.players.values()) {
@@ -269,7 +353,7 @@ io.on('connection', socket => {
 setInterval(() => {
   const now = Date.now();
   for (const [id, r] of rooms) {
-    if (r.players.size === 0 && now - r.updatedAt > EMPTY_ROOM_TTL_MS) rooms.delete(id);
+    if (r.players.size === 0 && now - r.updatedAt > EMPTY_ROOM_TTL_MS) { stopTimer(r); rooms.delete(id); }
   }
 }, 10 * 60 * 1000);
 
