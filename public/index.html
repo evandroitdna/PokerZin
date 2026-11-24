@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planning Poker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+<style>
+  :root {
+    --bg: #f4f6fb; --surface: #ffffff; --surface-2: #eef1f8; --border: #dde2ee;
+    --text: #1d2433; --muted: #6b7590; --primary: #3b5bdb; --primary-ink: #fff;
+    --primary-soft: #e5ebff; --table: #cfe0ff; --ok: #2b9348; --warn: #e8590c;
+    --card-back: linear-gradient(135deg, #3b5bdb, #6a83f0);
+    --shadow: 0 1px 2px rgba(20,30,60,.06), 0 6px 20px rgba(20,30,60,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151d; --surface: #1b1f2a; --surface-2: #232838; --border: #2e3446;
+      --text: #e6e9f2; --muted: #9099b2; --primary: #7b93ff; --primary-ink: #0d1020;
+      --primary-soft: #262f52; --table: #26304d; --ok: #51cf66; --warn: #ff922b;
+      --card-back: linear-gradient(135deg, #4c63d2, #7b93ff);
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .hidden { display: none !important; }
+
+  .btn { border: 1px solid var(--border); background: var(--surface); padding: 8px 14px; border-radius: 10px; font-weight: 600; }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.big { padding: 12px 26px; font-size: 16px; border-radius: 12px; }
+  .btn.ghost { background: transparent; border-color: transparent; }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+  }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  label.field { display: block; margin-bottom: 14px; }
+  label.field > span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  .check { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+
+  /* ---------- Home ---------- */
+  .center-page { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 28px; width: 100%; max-width: 480px; }
+  .panel h1 { margin: 0 0 4px; font-size: 24px; }
+  .panel p.sub { margin: 0 0 22px; color: var(--muted); }
+  .decks { display: grid; gap: 8px; margin-bottom: 14px; }
+  .deck-opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+  .deck-opt:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+  .deck-opt b { display: block; }
+  .deck-opt small { color: var(--muted); }
+
+  /* ---------- Room ---------- */
+  header.top { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  header.top h2 { margin: 0; font-size: 18px; flex: 1; min-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .layout { display: grid; grid-template-columns: 1fr 320px; min-height: calc(100vh - 61px); }
+  .layout.no-side { grid-template-columns: 1fr; }
+  main.game { display: flex; flex-direction: column; align-items: center; padding: 20px 16px 200px; gap: 18px; }
+  aside.side { border-left: 1px solid var(--border); background: var(--surface); padding: 16px; overflow-y: auto; max-height: calc(100vh - 61px); position: sticky; top: 0; }
+  aside.side h3 { margin: 0 0 4px; font-size: 16px; }
+
+  .story { width: 100%; max-width: 720px; display: flex; gap: 8px; }
+  .story input { font-size: 16px; font-weight: 600; }
+
+  .table-wrap { display: grid; grid-template-rows: auto auto auto; gap: 14px; justify-items: center; width: 100%; max-width: 900px; }
+  .seats { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; min-height: 110px; align-items: flex-end; }
+  .seats.bottom { align-items: flex-start; }
+  .seat { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; position: relative; }
+  .seats.bottom .seat { flex-direction: column-reverse; }
+  .seat .name { font-size: 13px; font-weight: 600; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+  .seat.offline { opacity: .45; }
+  .seat .tag { font-size: 10px; color: var(--muted); font-weight: 500; }
+  .seat-menu { position: absolute; top: -6px; right: 2px; font-size: 14px; border: 0; background: transparent; color: var(--muted); padding: 0 4px; display: none; }
+  .seat:hover .seat-menu { display: block; }
+  .mini-card { width: 46px; height: 68px; border-radius: 8px; border: 2px dashed var(--border); display: grid; place-items: center; font-weight: 800; font-size: 18px; background: var(--surface-2); transition: transform .4s; }
+  .mini-card.voted { border: 0; background: var(--card-back); }
+  .mini-card.shown { border: 2px solid var(--primary); background: var(--surface); color: var(--primary); animation: flip .45s ease; }
+  .mini-card.spect { border-style: solid; font-size: 20px; }
+  @keyframes flip { from { transform: rotateY(90deg); } to { transform: rotateY(0); } }
+
+  .table { width: min(100%, 520px); min-height: 150px; border-radius: 26px; background: var(--table); display: grid; place-items: center; padding: 20px; text-align: center; }
+  .table .hint { color: var(--muted); font-weight: 600; }
+
+  .results { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat { flex: 1; min-width: 100px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; }
+  .stat small { display: block; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .stat b { font-size: 22px; }
+  .bars { display: grid; gap: 6px; margin-bottom: 14px; }
+  .bar { display: grid; grid-template-columns: 56px 1fr 70px; gap: 10px; align-items: center; font-size: 14px; }
+  .bar .v { font-weight: 800; text-align: right; }
+  .bar .track { height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--primary); border-radius: 6px; }
+  .bar .c { color: var(--muted); }
+  .save-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 14px; }
+  .save-row input { width: 110px; }
+
+  /* Mão de cartas (rodapé) */
+  .hand { position: fixed; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--border); padding: 12px 12px 14px; z-index: 5; }
+  .layout:not(.no-side) ~ .hand { right: 320px; }
+  .hand .label { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  .cards { display: flex; gap: 8px; overflow-x: auto; padding: 12px 4px 4px; }
+  .cards > :first-child { margin-left: auto; } .cards > :last-child { margin-right: auto; }
+  .card { flex: 0 0 auto; width: 54px; height: 82px; border-radius: 10px; border: 2px solid var(--primary); background: var(--surface); color: var(--primary); font-weight: 800; font-size: 19px; transition: transform .12s, background .12s; display: grid; place-items: center; }
+  .card:hover:not(:disabled) { transform: translateY(-6px); }
+  .card.sel { background: var(--primary); color: var(--primary-ink); transform: translateY(-10px); }
+  .card.custom { border-style: dashed; font-size: 13px; line-height: 1.1; padding: 4px; }
+  .card:disabled { opacity: .45; cursor: default; }
+  .custom-box { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 8px; }
+  .custom-box input { width: 120px; }
+
+  .hist-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; }
+  .hist-item .t { flex: 1; min-width: 0; word-break: break-word; font-size: 14px; }
+  .hist-item .t small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .hist-item .val { font-weight: 800; color: var(--primary); white-space: nowrap; }
+  .hist-item .x { border: 0; background: transparent; color: var(--muted); padding: 0 2px; }
+  .total { display: flex; justify-content: space-between; padding: 10px 12px; background: var(--primary-soft); border-radius: 10px; margin: 10px 0 14px; font-weight: 700; }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  dialog { border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); padding: 24px; width: min(440px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+  dialog::backdrop { background: rgba(10,15,30,.45); }
+  dialog h3 { margin: 0 0 16px; }
+  .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 16px; border-radius: 10px; font-weight: 600; z-index: 50; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside.side { border-left: 0; border-top: 1px solid var(--border); max-height: none; position: static; padding-bottom: 200px; }
+    .layout:not(.no-side) ~ .hand { right: 0; }
+    main.game { padding-bottom: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section id="home" class="center-page hidden">
+  <form class="panel" id="createForm">
+    <h1>🃏 Planning Poker</h1>
+    <p class="sub">Crie uma sala e compartilhe o link com o time.</p>
+    <label class="field"><span>Nome da sala</span><input type="text" id="roomName" placeholder="Ex.: Sprint 42" maxlength="60"></label>
+    <span style="display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px">Baralho</span>
+    <div class="decks" id="deckOptions"></div>
+    <label class="field hidden" id="customDeckField"><span>Cartas (separadas por vírgula)</span>
+      <input type="text" id="customDeck" value="1, 2, 3, 4, 6, 8, 12, 16, ?, ☕"></label>
+    <label class="check"><input type="checkbox" id="allowCustom" checked> Permitir “outro valor” (ex.: 3h quando só existem 2h e 4h)</label>
+    <button class="btn primary big" style="width:100%">Criar sala</button>
+  </form>
+</section>
+
+<!-- ================= ROOM ================= -->
+<section id="room" class="hidden">
+  <header class="top">
+    <h2 id="roomTitle">Sala</h2>
+    <button class="btn" id="inviteBtn">🔗 Copiar convite</button>
+    <button class="btn ghost" id="historyBtn">📋 Histórico</button>
+    <button class="btn ghost" id="settingsBtn" title="Configurações da sala (somente o facilitador)">⚙️</button>
+    <button class="btn ghost" id="meBtn" title="Meu nome / modo espectador">👤 <span id="meName"></span></button>
+  </header>
+  <div class="layout" id="layout">
+    <main class="game">
+      <div class="story">
+        <input type="text" id="storyInput" placeholder="Qual tarefa estamos estimando? (ex.: JIRA-123 Tela de login)" maxlength="200">
+      </div>
+      <div class="table-wrap">
+        <div class="seats" id="seatsTop"></div>
+        <div class="table" id="tableCenter"></div>
+        <div class="seats bottom" id="seatsBottom"></div>
+      </div>
+      <div class="results hidden" id="results"></div>
+    </main>
+    <aside class="side" id="side">
+      <h3>Histórico</h3>
+      <div class="total" id="total"></div>
+      <div id="historyList"></div>
+      <button class="btn" id="exportBtn" style="width:100%">⬇️ Exportar CSV</button>
+    </aside>
+  </div>
+  <div class="hand" id="hand">
+    <div class="label" id="handLabel">Escolha sua carta 👇</div>
+    <div class="cards" id="cards"></div>
+    <form class="custom-box hidden" id="customBox">
+      <input type="text" inputmode="decimal" id="customInput" placeholder="Ex.: 3 ou 2,5" maxlength="7">
+      <button class="btn primary">Votar</button>
+      <button class="btn ghost" type="button" id="customCancel">Cancelar</button>
+    </form>
+  </div>
+</section>
+
+<!-- ================= DIALOGS ================= -->
+<dialog id="joinDialog">
+  <form method="dialog" id="joinForm">
+    <h3>Entrar na sala</h3>
+    <label class="field"><span>Seu nome</span><input type="text" id="joinName" maxlength="30" required autofocus></label>
+    <label class="check"><input type="checkbox" id="joinSpectator"> Entrar como espectador (não vota)</label>
+    <p id="joinError" style="color:var(--warn)" class="hidden"></p>
+    <div class="row"><button class="btn primary big" value="ok">Entrar</button></div>
+  </form>
+</dialog>
+
+<dialog id="settingsDialog">
+  <form method="dialog" id="settingsForm">
+    <h3>Configurações da sala</h3>
+    <label class="field"><span>Nome da sala</span><input type="text" id="setName" maxlength="60"></label>
+    <label class="field"><span>Cartas (separadas por vírgula)</span><input type="text" id="setCards"></label>
+    <label class="field"><span>Unidade (ex.: h, pts — opcional)</span><input type="text" id="setUnit" maxlength="4"></label>
+    <label class="check"><input type="checkbox" id="setAllowCustom"> Permitir “outro valor”</label>
+    <div class="row">
+      <button class="btn" value="cancel" formnovalidate>Cancelar</button>
+      <button class="btn primary" value="ok">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="playerDialog">
+  <form method="dialog">
+    <h3 id="playerDialogTitle"></h3>
+    <div class="row" style="justify-content:stretch;flex-direction:column">
+      <button class="btn" value="host">👑 Tornar facilitador</button>
+      <button class="btn" value="kick" style="color:var(--warn)">Remover da sala</button>
+      <button class="btn ghost" value="cancel">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const toast = msg => {
+    const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 1800);
+  };
+  const num = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) && String(v).trim() !== '' ? n : null; };
+  const fmt = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  const showVal = v => String(v).replace('.', ',');
+
+  const socket = io();
+  let state = null;
+  let myId = store.get('pp_clientId', null);
+  let roomId = null;
+  let joined = false;
+  let showSide = store.get('pp_showSide', true);
+  let lastSavedSuggestion = null;
+
+  // ---------- Roteamento ----------
+  const m = location.pathname.match(/^\/sala\/([a-f0-9]+)/);
+  if (m) { roomId = m[1]; $('room').classList.remove('hidden'); openJoin(); }
+  else { $('home').classList.remove('hidden'); initHome(); }
+
+  // ---------- Home ----------
+  function initHome() {
+    socket.emit('decks', decks => {
+      const opts = Object.entries(decks).map(([k, d], i) => `
+        <label class="deck-opt"><input type="radio" name="deck" value="${k}" ${i === 0 ? 'checked' : ''}>
+          <span><b>${esc(d.label)}</b><small>${d.cards.map(esc).join(' · ')}</small></span></label>`).join('')
+        + `<label class="deck-opt"><input type="radio" name="deck" value="custom">
+          <span><b>Personalizado</b><small>Defina suas próprias cartas</small></span></label>`;
+      $('deckOptions').innerHTML = opts;
+      $('deckOptions').addEventListener('change', () => {
+        const v = document.querySelector('input[name=deck]:checked').value;
+        $('customDeckField').classList.toggle('hidden', v !== 'custom');
+      });
+    });
+    $('createForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const deckType = document.querySelector('input[name=deck]:checked')?.value || 'horas';
+      socket.emit('create_room', {
+        name: $('roomName').value,
+        deckType,
+        cards: $('customDeck').value.split(','),
+        unit: '',
+        allowCustom: $('allowCustom').checked,
+      }, res => { if (res.ok) location.href = '/sala/' + res.id; });
+    });
+  }
+
+  // ---------- Entrar ----------
+  function openJoin(err) {
+    $('joinName').value = store.get('pp_name', '');
+    $('joinSpectator').checked = store.get('pp_spectator', false);
+    $('joinError').textContent = err || '';
+    $('joinError').classList.toggle('hidden', !err);
+    if (!$('joinDialog').open) $('joinDialog').showModal();
+  }
+  $('joinDialog').addEventListener('cancel', e => e.preventDefault());
+  $('joinForm').addEventListener('submit', e => {
+    const name = $('joinName').value.trim();
+    if (!name) { e.preventDefault(); return; }
+    store.set('pp_name', name);
+    store.set('pp_spectator', $('joinSpectator').checked);
+    doJoin();
+  });
+  function doJoin() {
+    socket.emit('join', { roomId, clientId: myId, name: store.get('pp_name', ''), spectator: store.get('pp_spectator', false) }, res => {
+      if (!res.ok) { joined = false; openJoin(res.error); return; }
+      myId = res.clientId; store.set('pp_clientId', myId); joined = true;
+    });
+  }
+  socket.on('connect', () => { if (joined) doJoin(); });
+  socket.on('kicked', () => { joined = false; alert('Você foi removido da sala.'); location.href = '/'; });
+
+  // ---------- Header ----------
+  $('inviteBtn').onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); toast('Link copiado!'); }
+    catch { prompt('Copie o link da sala:', location.href); }
+  };
+  $('historyBtn').onclick = () => { showSide = !showSide; store.set('pp_showSide', showSide); render(); };
+  $('meBtn').onclick = () => openJoin();
+  $('settingsBtn').onclick = () => {
+    if (!state) return;
+    if (state.hostId !== myId) { toast('Somente o facilitador 👑 altera a sala'); return; }
+    $('setName').value = state.name;
+    $('setCards').value = state.deck.join(', ');
+    $('setUnit').value = state.unit || '';
+    $('setAllowCustom').checked = state.allowCustom;
+    $('settingsDialog').showModal();
+  };
+  $('settingsDialog').addEventListener('close', () => {
+    if ($('settingsDialog').returnValue !== 'ok') return;
+    socket.emit('update_settings', {
+      name: $('setName').value, cards: $('setCards').value.split(','),
+      unit: $('setUnit').value, allowCustom: $('setAllowCustom').checked,
+    });
+  });
+
+  // ---------- Tarefa ----------
+  $('storyInput').addEventListener('input', () => socket.emit('set_story', $('storyInput').value));
+
+  // ---------- Votação ----------
+  $('cards').addEventListener('click', e => {
+    const b = e.target.closest('button.card'); if (!b || b.disabled) return;
+    if (b.dataset.custom) { toggleCustom(true); return; }
+    toggleCustom(false);
+    socket.emit('vote', b.dataset.v);
+  });
+  function toggleCustom(open) {
+    $('customBox').classList.toggle('hidden', !open);
+    if (open) { $('customInput').value = ''; $('customInput').focus(); }
+  }
+  $('customCancel').onclick = () => toggleCustom(false);
+  $('customBox').addEventListener('submit', e => {
+    e.preventDefault();
+    const raw = $('customInput').value.trim().replace(',', '.');
+    if (!/^\d{1,4}(\.\d{1,2})?$/.test(raw)) { toast('Digite um número, ex.: 3 ou 2,5'); return; }
+    socket.emit('vote', String(Number(raw)));
+    toggleCustom(false);
+  });
+
+  // ---------- Jogadores ----------
+  let targetPlayer = null;
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.seat-menu'); if (!b) return;
+    targetPlayer = state.players.find(p => p.id === b.dataset.id); if (!targetPlayer) return;
+    $('playerDialogTitle').textContent = targetPlayer.name;
+    $('playerDialog').showModal();
+  });
+  $('playerDialog').addEventListener('close', () => {
+    const v = $('playerDialog').returnValue;
+    if (!targetPlayer) return;
+    if (v === 'host') socket.emit('make_host', targetPlayer.id);
+    if (v === 'kick') socket.emit('kick', targetPlayer.id);
+    targetPlayer = null;
+  });
+
+  // ---------- Histórico ----------
+  $('historyList').addEventListener('click', e => {
+    const b = e.target.closest('button.x'); if (!b) return;
+    if (confirm('Remover esta tarefa do histórico?')) socket.emit('remove_history', Number(b.dataset.i));
+  });
+  $('exportBtn').onclick = () => {
+    if (!state?.history.length) { toast('Histórico vazio'); return; }
+    const q = s => '"' + String(s).replace(/"/g, '""') + '"';
+    const rows = [['Tarefa', 'Estimativa', 'Unidade', 'Votos', 'Data']]
+      .concat([...state.history].reverse().map(h => [h.story, showVal(h.value), h.unit || '',
+        h.votes.map(v => `${v.name}: ${showVal(v.vote)}`).join(' | '), new Date(h.at).toLocaleString('pt-BR')]));
+    const blob = new Blob(['﻿' + rows.map(r => r.map(q).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `planning-poker-${(state.name || 'sala').replace(/\W+/g, '-')}.csv`; a.click();
+  };
+
+  // ---------- Estado ----------
+  socket.on('state', s => {
+    const prevRevealed = state?.revealed;
+    state = s;
+    if (!s.revealed || !prevRevealed) lastSavedSuggestion = null;
+    render();
+  });
+
+  function stats() {
+    const voters = state.players.filter(p => !p.spectator && p.vote !== null);
+    const nums = voters.map(p => num(p.vote)).filter(n => n !== null);
+    const counts = {};
+    voters.forEach(p => counts[p.vote] = (counts[p.vote] || 0) + 1);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1] || (num(a[0]) ?? 1e9) - (num(b[0]) ?? 1e9));
+    const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+    const consensus = voters.length > 0 && sorted.length === 1;
+    return { voters, nums, sorted, avg, min: nums.length ? Math.min(...nums) : null, max: nums.length ? Math.max(...nums) : null, consensus };
+  }
+
+  function render() {
+    if (!state) return;
+    const u = state.unit ? state.unit : '';
+    document.title = `${state.name} · Planning Poker`;
+    $('roomTitle').textContent = state.name;
+    const me = state.players.find(p => p.id === myId);
+    $('meName').textContent = me ? me.name + (me.spectator ? ' (espectador)' : '') : '';
+    $('settingsBtn').classList.toggle('hidden', state.hostId !== myId);
+    if (document.activeElement !== $('storyInput')) $('storyInput').value = state.story;
+
+    // Assentos
+    const players = [...state.players].sort((a, b) => a.spectator - b.spectator);
+    const half = Math.ceil(players.length / 2);
+    const seat = p => {
+      let card;
+      if (p.spectator) card = `<div class="mini-card spect">👀</div>`;
+      else if (state.revealed && p.vote !== null) card = `<div class="mini-card shown">${esc(showVal(p.vote))}</div>`;
+      else card = `<div class="mini-card ${p.voted ? 'voted' : ''}"></div>`;
+      const menu = state.hostId === myId && p.id !== myId ? `<button class="seat-menu" data-id="${esc(p.id)}" title="Opções">⋯</button>` : '';
+      return `<div class="seat ${p.online ? '' : 'offline'}">${menu}${card}
+        <div class="name">${p.host ? '👑 ' : ''}${esc(p.name)}${p.id === myId ? ' (você)' : ''}</div>
+        ${p.online ? '' : '<div class="tag">offline</div>'}</div>`;
+    };
+    $('seatsTop').innerHTML = players.slice(0, half).map(seat).join('');
+    $('seatsBottom').innerHTML = players.slice(half).map(seat).join('');
+
+    // Centro da mesa
+    const voters = state.players.filter(p => !p.spectator);
+    const votedCount = voters.filter(p => p.voted).length;
+    let center;
+    if (state.revealed) center = `<button class="btn primary big" id="newRoundBtn">Nova votação</button>`;
+    else if (votedCount === 0) center = `<div class="hint">Escolham suas cartas!<br><small>${voters.length} votante(s) na mesa</small></div>`;
+    else center = `<div><button class="btn primary big" id="revealBtn">Revelar cartas</button>
+      <div class="hint" style="margin-top:8px"><small>${votedCount} de ${voters.length} votaram</small></div></div>`;
+    $('tableCenter').innerHTML = center;
+    $('revealBtn')?.addEventListener('click', () => socket.emit('reveal'));
+    $('newRoundBtn')?.addEventListener('click', () => socket.emit('new_round'));
+
+    // Resultados
+    const res = $('results');
+    if (state.revealed) {
+      const s = stats();
+      const maxCount = s.sorted.length ? s.sorted[0][1] : 1;
+      let suggestion = '';
+      if (s.consensus) suggestion = s.sorted[0][0];
+      else if (s.avg !== null) suggestion = String(Math.round(s.avg * 2) / 2);
+      if (lastSavedSuggestion === null) lastSavedSuggestion = suggestion;
+      const prevInput = $('finalValue')?.value;
+      res.innerHTML = `
+        <div class="stats">
+          <div class="stat"><small>Média</small><b>${s.avg === null ? '–' : fmt(s.avg) + esc(u)}</b></div>
+          <div class="stat"><small>Mín · Máx</small><b>${s.min === null ? '–' : `${fmt(s.min)} · ${fmt(s.max)}`}</b></div>
+          <div class="stat"><small>Votos</small><b>${s.voters.length}</b></div>
+          <div class="stat"><small>Consenso</small><b>${s.consensus ? '🎉 Sim' : s.voters.length ? 'Não' : '–'}</b></div>
+        </div>
+        <div class="bars">${s.sorted.map(([v, c]) => `
+          <div class="bar"><span class="v">${esc(showVal(v))}${num(v) !== null ? esc(u) : ''}</span>
+            <span class="track"><span class="fill" style="width:${(c / maxCount) * 100}%;display:block"></span></span>
+            <span class="c">${c} voto${c > 1 ? 's' : ''}</span></div>`).join('') || '<p class="empty">Ninguém votou nesta rodada.</p>'}
+        </div>
+        <form class="save-row" id="saveForm">
+          <b>Estimativa final:</b>
+          <input type="text" id="finalValue" maxlength="10" value="${esc(showVal(prevInput !== undefined ? prevInput : lastSavedSuggestion))}">
+          ${u ? `<span>${esc(u)}</span>` : ''}
+          <button class="btn primary">Salvar no histórico e próxima tarefa</button>
+        </form>`;
+      res.classList.remove('hidden');
+      $('saveForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const v = $('finalValue').value.trim();
+        if (!v) { toast('Informe a estimativa final'); return; }
+        socket.emit('save_estimate', { value: num(v) !== null ? String(num(v)) : v });
+        toast('Estimativa salva ✔');
+      });
+    } else { res.classList.add('hidden'); res.innerHTML = ''; }
+
+    // Mão de cartas
+    const spect = !me || me.spectator;
+    $('hand').classList.toggle('hidden', spect || state.revealed);
+    const sel = me?.vote ?? null; // o servidor envia o seu próprio voto
+    const isCustomVote = sel !== null && sel !== undefined && !state.deck.includes(sel);
+    $('cards').innerHTML = state.deck.map(c =>
+      `<button class="card ${sel === c ? 'sel' : ''}" data-v="${esc(c)}" ${state.revealed ? 'disabled' : ''}>${esc(showVal(c))}</button>`).join('')
+      + (state.allowCustom ? `<button class="card custom ${isCustomVote ? 'sel' : ''}" data-custom="1" ${state.revealed ? 'disabled' : ''}>
+          ${isCustomVote ? esc(showVal(sel)) + esc(u) : 'Outro<br>valor'}</button>` : '');
+    $('handLabel').textContent = state.revealed ? 'Cartas reveladas — inicie uma nova votação para votar de novo'
+      : sel != null ? `Seu voto: ${showVal(sel)}${num(sel) !== null ? u : ''} (clique de novo para desmarcar)` : 'Escolha sua carta 👇';
+    if (state.revealed) toggleCustom(false);
+
+    // Histórico
+    $('layout').classList.toggle('no-side', !showSide);
+    $('side').classList.toggle('hidden', !showSide);
+    const h = state.history;
+    const total = h.reduce((a, x) => a + (num(x.value) ?? 0), 0);
+    $('total').innerHTML = `<span>${h.length} tarefa(s)</span><span>Total: ${fmt(total)}${esc(u)}</span>`;
+    $('historyList').innerHTML = h.length ? h.map((x, i) => `
+      <div class="hist-item"><div class="t">${esc(x.story)}
+        <small>${x.votes.map(v => esc(v.name) + ': ' + esc(showVal(v.vote))).join(' · ') || 'sem votos'}</small></div>
+        <span class="val">${esc(showVal(x.value))}${num(x.value) !== null ? esc(x.unit || '') : ''}</span>
+        <button class="x" data-i="${i}" title="Remover">✕</button></div>`).join('')
+      : '<p class="empty">As tarefas estimadas aparecem aqui.</p>';
+  }
+
+})();
+</script>
+</body>
+</html>
